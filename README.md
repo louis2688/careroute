@@ -1,6 +1,6 @@
 # CareRoute
 
-Demo website for a non-emergency medical transportation (NEMT) company. Built with Next.js 16, React 19, Tailwind CSS 4, and Supabase (Postgres).
+Website for a non-emergency medical transportation. Built with Next.js 16, React 19, Tailwind CSS 4, and Supabase (Postgres).
 
 ## Pages
 
