@@ -1,6 +1,7 @@
 "use server";
 
 import { validateBooking } from "@/lib/booking";
+import { insertBooking } from "@/lib/db";
 
 export type BookingState = { ok: true; ref: string } | { ok: false; error: string } | null;
 
@@ -8,7 +9,11 @@ export async function submitBooking(_prev: BookingState, form: FormData): Promis
   const result = validateBooking(form);
   if (!result.ok) return { ok: false, error: result.error };
   const ref = `CR-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-  // ponytail: nothing is stored yet. Replace this log with a DB insert or a dispatch email.
-  console.log(`[booking ${ref}]`, result.booking);
+  try {
+    await insertBooking(ref, result.booking);
+  } catch (e) {
+    console.error(`[booking ${ref}] save failed`, e);
+    return { ok: false, error: "We could not save your request. Please call dispatch." };
+  }
   return { ok: true, ref };
 }
