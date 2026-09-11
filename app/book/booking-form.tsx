@@ -9,12 +9,14 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { preconnect } from "react-dom";
 import { Icon } from "@/components/icons";
-import { MOBILITY, PURPOSES } from "@/lib/booking";
-import type { Place } from "@/lib/geo";
-import { kmToMiles, money } from "@/lib/pricing";
-import { site } from "@/lib/site";
-import { quoteTrip, submitBooking, type Quote } from "./actions";
+import { MOBILITY, PURPOSES, oneOf, TRIP_TYPES } from "@/lib/booking";
+import { drivingRoute, searchPlaces, type Place } from "@/lib/geo";
+import { estimateFare, kmToMiles, money } from "@/lib/pricing";
+import { submitBooking } from "./actions";
+
+type Quote = { km: number; minutes: number; cents: number };
 
 const input =
   "mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:border-sky-700";
@@ -64,7 +66,10 @@ function Field({
   );
 }
 
-export function BookingForm() {
+export function BookingForm({ phone, phoneHref }: { phone: string; phoneHref: string }) {
+  // Warm up the two hosts the form talks to, before the passenger starts typing.
+  preconnect("https://photon.komoot.io");
+  preconnect("https://router.project-osrm.org");
   const [state, action, pending] = useActionState(submitBooking, null);
   // Client-only value with no effect: empty on the server, the passenger's local date after hydration.
   const minDate = useSyncExternalStore(noop, today, () => "");
@@ -87,11 +92,13 @@ export function BookingForm() {
     const to = places.current.get(String(fd.get("dropoff")));
     const mobility = String(fd.get("mobility") ?? "");
     const tripType = String(fd.get("tripType") ?? "one-way");
-    if (!from || !to || !mobility) return setQuote(null);
+    if (!from || !to || !oneOf(MOBILITY, mobility) || !oneOf(TRIP_TYPES, tripType)) return setQuote(null);
     const seq = ++quoteSeq.current;
     setQuote("loading");
-    const q = await quoteTrip({ from, to, mobility, tripType }).catch(() => null);
-    if (seq === quoteSeq.current) setQuote(q); // ignore answers to older requests
+    // Estimate only. The server routes and prices the trip again when the form is submitted.
+    const route = await drivingRoute(from, to);
+    if (seq !== quoteSeq.current) return; // a newer request is in flight
+    setQuote(route && { ...route, cents: estimateFare(route.km, mobility, tripType) });
   }
 
   // One handler for the whole form: address typing fetches suggestions, anything else refreshes the quote.
@@ -107,9 +114,7 @@ export function BookingForm() {
         debounce(
           key,
           async () => {
-            const found: Place[] = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`)
-              .then((r) => r.json())
-              .catch(() => []);
+            const found = await searchPlaces(q);
             for (const p of found) places.current.set(p.label, p);
             setOptions((o) => ({ ...o, [key]: found }));
           },
@@ -134,8 +139,8 @@ export function BookingForm() {
         </p>
         <p className="mt-2 text-slate-700">
           Need to change something? Call{" "}
-          <a href={site.phoneHref} className="font-medium text-sky-700 underline">
-            {site.phone}
+          <a href={phoneHref} className="font-medium text-sky-700 underline">
+            {phone}
           </a>{" "}
           and give the reference number.
         </p>

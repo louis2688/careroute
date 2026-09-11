@@ -6,16 +6,12 @@ type PhotonFeature = {
   geometry: { coordinates: [number, number] };
 };
 
-const UA = { "User-Agent": "careroute-demo (booking form)" };
-
 // ponytail: free public OSM services (Photon geocoder, OSRM demo router) so the demo needs no API key.
+// Both allow browser calls, so the form talks to them directly and skips a serverless hop.
 // Production: swap these two functions for Mapbox or Google. Nothing else changes.
 export async function searchPlaces(q: string): Promise<Place[]> {
   try {
-    const r = await fetch(
-      `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6&lang=en`,
-      { headers: UA, next: { revalidate: 86400 } },
-    );
+    const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6&lang=en`);
     if (!r.ok) return [];
     const { features } = (await r.json()) as { features: PhotonFeature[] };
     const seen = new Set<string>();
@@ -38,7 +34,6 @@ export async function drivingRoute(a: Place, b: Place): Promise<Route | null> {
   try {
     const r = await fetch(
       `https://router.project-osrm.org/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=false`,
-      { headers: UA },
     );
     if (!r.ok) return null;
     const d = (await r.json()) as { routes?: { distance: number; duration: number }[] };

@@ -16,7 +16,7 @@ export default function BookPage() {
       />
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1fr_20rem] lg:py-16">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-          <BookingForm />
+          <BookingForm phone={site.phone} phoneHref={site.phoneHref} />
         </div>
         <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-2xl border border-slate-200 bg-white p-6">
