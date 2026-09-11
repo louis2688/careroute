@@ -1,36 +1,28 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CareRoute
 
-## Getting Started
+Demo website for a non-emergency medical transportation (NEMT) company. Built with Next.js 16, React 19, and Tailwind CSS 4.
 
-First, run the development server:
+## Pages
+
+- `/` company overview: description, mission, vision, services summary, how booking works
+- `/services` the eight NEMT services with what each includes
+- `/terms` terms and conditions of service
+- `/book` ride request form with server-side validation and a confirmation reference
+
+## Run it
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Other scripts: `npm run build`, `npm run lint`, `npm test` (validation rules).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Where things live
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `lib/site.ts` all copy: company name, contact details, services, terms. Rebranding is a one-file edit.
+- `lib/booking.ts` booking validation rules, shared by the server action and the test.
+- `app/book/actions.ts` the server action. Bookings are validated and logged. Swap the log for a database insert or an email to dispatch.
+- `components/icons.tsx` inline Lucide icons, no icon package needed.
