@@ -24,17 +24,18 @@ export type BookingRow = {
 };
 
 // ponytail: PostgREST over fetch, no SDK. Swap for @supabase/supabase-js if queries grow.
-// The service role key bypasses RLS, so this module must only run on the server.
+// The secret key bypasses RLS, so this module must only run on the server.
 function api(path: string, init: RequestInit = {}) {
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local");
+  const key = process.env.SUPABASE_SECRET_KEY;
+  if (!url || !key) throw new Error("Set SUPABASE_URL and SUPABASE_SECRET_KEY in .env.local");
   return fetch(`${url}/rest/v1/${path}`, {
     ...init,
     cache: "no-store",
     headers: {
       apikey: key,
-      Authorization: `Bearer ${key}`,
+      // New sb_secret_ keys are not JWTs and go on apikey only. Legacy service_role JWTs need both.
+      ...(key.startsWith("sb_") ? {} : { Authorization: `Bearer ${key}` }),
       "Content-Type": "application/json",
       Prefer: "return=minimal",
       ...init.headers,

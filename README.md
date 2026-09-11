@@ -23,7 +23,7 @@ Open http://localhost:3000.
 | Variable | Where it comes from |
 |---|---|
 | `SUPABASE_URL` | Supabase dashboard, Settings > API, Project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Same page, service_role key. Server only, never shipped to the browser. |
+| `SUPABASE_SECRET_KEY` | Same page, create a secret key (`sb_secret_...`). Server only, never shipped to the browser. Legacy `service_role` keys also work. |
 | `ADMIN_PASSWORD` | Anything you like. The browser asks for it on `/admin` (any username). |
 
 Other scripts: `npm run build`, `npm run lint`, `npm test` (validation and auth rules).
@@ -32,7 +32,7 @@ Other scripts: `npm run build`, `npm run lint`, `npm test` (validation and auth 
 
 1. The form on `/book` posts to a Server Action.
 2. `lib/booking.ts` validates every field again on the server. Server Actions are public endpoints.
-3. `lib/db.ts` inserts the row through Supabase's REST API with the service role key.
+3. `lib/db.ts` inserts the row through Supabase's REST API with the secret key.
 4. `/admin` reads the same table. Row Level Security is on with no policies, so only the server can read or write.
 
 Database schema lives in the Supabase migration `create_bookings`.
