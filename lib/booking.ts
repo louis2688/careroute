@@ -1,3 +1,5 @@
+import type { Place } from "./geo";
+
 export const TRIP_TYPES = ["one-way", "round-trip"] as const;
 export const MOBILITY = ["ambulatory", "wheelchair", "stretcher"] as const;
 export const PURPOSES = [
@@ -24,6 +26,8 @@ export type Booking = {
   companions: number;
   purpose: string;
   notes: string;
+  // Present when both addresses were picked from the suggestions.
+  coords?: { pickup: Place; dropoff: Place };
 };
 
 type Result = { ok: true; booking: Booking } | { ok: false; error: string };
@@ -38,7 +42,7 @@ const REQUIRED = {
   time: "Pickup time",
 };
 
-const oneOf = <T extends readonly string[]>(list: T, v: string): v is T[number] =>
+export const oneOf = <T extends readonly string[]>(list: T, v: string): v is T[number] =>
   (list as readonly string[]).includes(v);
 
 // Server-side backstop behind the browser's native validation. Server Actions are public endpoints.
@@ -69,6 +73,26 @@ export function validateBooking(form: FormData): Result {
   if (form.get("agree") !== "on") {
     return { ok: false, error: "Please accept the Terms & Conditions." };
   }
+
+  // Coordinates are optional and only trusted within sane bounds. Bad values are ignored, not fatal.
+  const num = (k: string, max: number) => {
+    const v = Number(s(k));
+    return s(k) && Number.isFinite(v) && Math.abs(v) <= max ? v : null;
+  };
+  const [plat, plon, dlat, dlon] = [
+    num("pickup_lat", 90),
+    num("pickup_lon", 180),
+    num("dropoff_lat", 90),
+    num("dropoff_lon", 180),
+  ];
+  const coords =
+    plat !== null && plon !== null && dlat !== null && dlon !== null
+      ? {
+          pickup: { label: s("pickup"), lat: plat, lon: plon },
+          dropoff: { label: s("dropoff"), lat: dlat, lon: dlon },
+        }
+      : undefined;
+
   return {
     ok: true,
     booking: {
@@ -85,6 +109,7 @@ export function validateBooking(form: FormData): Result {
       companions,
       purpose: s("purpose"),
       notes: s("notes").slice(0, 2000),
+      coords,
     },
   };
 }

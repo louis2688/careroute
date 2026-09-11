@@ -13,6 +13,8 @@ export const site = {
   email: "dispatch@careroute.example",
   address: "1200 Harbor Drive, Suite 210, Portside",
   hours: "Dispatch open 6:00 AM to 8:00 PM, seven days a week",
+  timeZone: "America/New_York", // the company's operating timezone, used for every displayed time
+  defaultCountryCode: "+1", // assumed for SMS when a passenger types a number without a + prefix
   description:
     "CareRoute drives patients to and from medical appointments when an ambulance is not needed. We run sedans, wheelchair vans, and stretcher vehicles, and every driver is trained to help passengers from their front door to the check-in desk.",
   about: [

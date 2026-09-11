@@ -1,11 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useSyncExternalStore, type ReactNode } from "react";
+import {
+  useActionState,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { Icon } from "@/components/icons";
 import { MOBILITY, PURPOSES } from "@/lib/booking";
+import type { Place } from "@/lib/geo";
+import { kmToMiles, money } from "@/lib/pricing";
 import { site } from "@/lib/site";
-import { submitBooking } from "./actions";
+import { quoteTrip, submitBooking, type Quote } from "./actions";
 
 const input =
   "mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:border-sky-700";
@@ -20,6 +29,8 @@ const mobilityHelp: Record<(typeof MOBILITY)[number], string> = {
   wheelchair: "Rides in a wheelchair, their own or a loaner.",
   stretcher: "Must stay lying down for the trip.",
 };
+
+type AddressKey = "pickup" | "dropoff";
 
 function Star() {
   return (
@@ -58,7 +69,59 @@ export function BookingForm() {
   // Client-only value with no effect: empty on the server, the passenger's local date after hydration.
   const minDate = useSyncExternalStore(noop, today, () => "");
 
+  const [options, setOptions] = useState<Record<AddressKey, Place[]>>({ pickup: [], dropoff: [] });
+  const [picked, setPicked] = useState<Partial<Record<AddressKey, Place>>>({});
+  const [quote, setQuote] = useState<Quote | null | "loading">(null);
+  const places = useRef(new Map<string, Place>()); // every suggestion seen, by label
+  const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const quoteSeq = useRef(0);
+
+  const debounce = (key: string, fn: () => void, ms: number) => {
+    clearTimeout(timers.current[key]);
+    timers.current[key] = setTimeout(fn, ms);
+  };
+
+  async function requestQuote(form: HTMLFormElement) {
+    const fd = new FormData(form);
+    const from = places.current.get(String(fd.get("pickup")));
+    const to = places.current.get(String(fd.get("dropoff")));
+    const mobility = String(fd.get("mobility") ?? "");
+    const tripType = String(fd.get("tripType") ?? "one-way");
+    if (!from || !to || !mobility) return setQuote(null);
+    const seq = ++quoteSeq.current;
+    setQuote("loading");
+    const q = await quoteTrip({ from, to, mobility, tripType }).catch(() => null);
+    if (seq === quoteSeq.current) setQuote(q); // ignore answers to older requests
+  }
+
+  // One handler for the whole form: address typing fetches suggestions, anything else refreshes the quote.
+  function onFormChange(e: FormEvent<HTMLFormElement>) {
+    const form = e.currentTarget;
+    const t = e.target as HTMLInputElement;
+    if (t.name === "pickup" || t.name === "dropoff") {
+      const key = t.name;
+      const q = t.value.trim();
+      const place = places.current.get(q); // exact label match means it was picked from the list
+      setPicked((p) => ({ ...p, [key]: place }));
+      if (!place && q.length >= 3) {
+        debounce(
+          key,
+          async () => {
+            const found: Place[] = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`)
+              .then((r) => r.json())
+              .catch(() => []);
+            for (const p of found) places.current.set(p.label, p);
+            setOptions((o) => ({ ...o, [key]: found }));
+          },
+          300,
+        );
+      }
+    }
+    debounce("quote", () => requestQuote(form), 400);
+  }
+
   if (state?.ok) {
+    const sent = [state.notified.email && "your email", state.notified.sms && "your phone"].filter(Boolean);
     return (
       <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-6 sm:p-8">
         <Icon name="check-circle" className="size-10 text-emerald-700" />
@@ -67,6 +130,7 @@ export function BookingForm() {
           Your reference number is{" "}
           <strong className="font-semibold text-slate-900">{state.ref}</strong>. Dispatch will call
           or email you within one business hour to confirm the pickup window and the price.
+          {sent.length > 0 && ` A confirmation is on its way to ${sent.join(" and ")}.`}
         </p>
         <p className="mt-2 text-slate-700">
           Need to change something? Call{" "}
@@ -75,15 +139,21 @@ export function BookingForm() {
           </a>{" "}
           and give the reference number.
         </p>
-        <a href="/book" className="btn-secondary mt-6">
-          Book another ride
-        </a>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link href={`/trip/${state.ref}`} className="btn-primary">
+            Track your ride
+            <Icon name="arrow-right" className="size-4" />
+          </Link>
+          <a href="/book" className="btn-secondary">
+            Book another ride
+          </a>
+        </div>
       </div>
     );
   }
 
   return (
-    <form action={action} className="space-y-10">
+    <form action={action} onChange={onFormChange} className="space-y-10">
       {state && !state.ok && (
         <p
           role="alert"
@@ -100,7 +170,7 @@ export function BookingForm() {
           <Field label="Full name" required>
             <input name="name" required autoComplete="name" className={input} />
           </Field>
-          <Field label="Phone number" required hint="We call this number to confirm the ride.">
+          <Field label="Phone number" required hint="We text and call this number about the ride.">
             <input name="phone" type="tel" required autoComplete="tel" className={input} />
           </Field>
           <Field label="Email" required>
@@ -119,11 +189,21 @@ export function BookingForm() {
       <fieldset className="space-y-4">
         <legend className={legend}>Trip details</legend>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Pickup address" required>
-            <input name="pickup" required autoComplete="street-address" className={input} />
+          <Field label="Pickup address" required hint="Start typing, then pick from the suggestions.">
+            <input name="pickup" list="pickup-list" required autoComplete="off" className={input} />
+            <datalist id="pickup-list">
+              {options.pickup.map((p) => (
+                <option key={p.label} value={p.label} />
+              ))}
+            </datalist>
           </Field>
-          <Field label="Destination" required hint="Facility name and address, if you have it.">
-            <input name="dropoff" required className={input} />
+          <Field label="Destination" required hint="Facility name or address.">
+            <input name="dropoff" list="dropoff-list" required autoComplete="off" className={input} />
+            <datalist id="dropoff-list">
+              {options.dropoff.map((p) => (
+                <option key={p.label} value={p.label} />
+              ))}
+            </datalist>
           </Field>
           <Field label="Appointment date" required>
             <input name="date" type="date" required min={minDate} className={input} />
@@ -161,6 +241,10 @@ export function BookingForm() {
             <input name="returnTime" type="time" className={input} />
           </Field>
         </div>
+        <input type="hidden" name="pickup_lat" value={picked.pickup?.lat ?? ""} />
+        <input type="hidden" name="pickup_lon" value={picked.pickup?.lon ?? ""} />
+        <input type="hidden" name="dropoff_lat" value={picked.dropoff?.lat ?? ""} />
+        <input type="hidden" name="dropoff_lon" value={picked.dropoff?.lon ?? ""} />
       </fieldset>
 
       <fieldset className="space-y-4">
@@ -211,6 +295,25 @@ export function BookingForm() {
       </fieldset>
 
       <div className="space-y-5 border-t border-slate-200 pt-6">
+        <div aria-live="polite" className="rounded-lg border border-sky-200 bg-sky-50 p-4">
+          {quote === "loading" ? (
+            <p className="text-sm text-slate-600">Calculating a fare estimate…</p>
+          ) : quote ? (
+            <>
+              <p className="text-sm font-medium text-sky-900">Estimated fare</p>
+              <p className="mt-1 font-heading text-3xl font-bold text-slate-900">{money(quote.cents)}</p>
+              <p className="mt-1 text-sm text-slate-600">
+                {kmToMiles(quote.km).toFixed(1)} miles each way, about {Math.round(quote.minutes)} minutes
+                of driving. Dispatch confirms the final price.
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-slate-600">
+              Pick the pickup and destination from the address suggestions and choose a mobility
+              option to see a fare estimate.
+            </p>
+          )}
+        </div>
         <label className="flex cursor-pointer items-start gap-3 text-sm text-slate-700">
           <input type="checkbox" name="agree" required className="mt-0.5 size-4 shrink-0 accent-sky-700" />
           <span>
@@ -226,8 +329,8 @@ export function BookingForm() {
           {pending ? "Sending request…" : "Submit ride request"}
         </button>
         <p className="text-sm text-slate-500">
-          This is a request, not a confirmed booking. Dispatch confirms every ride by phone or
-          email.
+          This is a request, not a confirmed booking. Dispatch confirms every ride by phone, text,
+          or email.
         </p>
       </div>
     </form>

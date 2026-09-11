@@ -1,7 +1,23 @@
 import type { Booking } from "@/lib/booking";
+import type { Route } from "@/lib/geo";
 
-export const STATUSES = ["new", "confirmed", "cancelled"] as const;
+export const STATUSES = ["new", "confirmed", "en_route", "completed", "cancelled"] as const;
 export type Status = (typeof STATUSES)[number];
+
+export const STATUS_LABEL: Record<Status, string> = {
+  new: "Request received",
+  confirmed: "Confirmed by dispatch",
+  en_route: "Driver on the way",
+  completed: "Ride completed",
+  cancelled: "Cancelled",
+};
+
+// What dispatch can do next from each status.
+export const NEXT_STEP: Partial<Record<Status, { status: Status; label: string }>> = {
+  new: { status: "confirmed", label: "Confirm" },
+  confirmed: { status: "en_route", label: "Driver en route" },
+  en_route: { status: "completed", label: "Complete" },
+};
 
 export type BookingRow = {
   id: string;
@@ -21,7 +37,12 @@ export type BookingRow = {
   companions: number;
   purpose: string;
   notes: string;
+  distance_km: number | null;
+  duration_min: number | null;
+  quote_cents: number | null;
 };
+
+export type TripRow = BookingRow & { booking_events: { status: Status; at: string }[] };
 
 // ponytail: PostgREST over fetch, no SDK. Swap for @supabase/supabase-js if queries grow.
 // The secret key bypasses RLS, so this module must only run on the server.
@@ -46,11 +67,28 @@ function api(path: string, init: RequestInit = {}) {
   });
 }
 
-export async function insertBooking(ref: string, b: Booking) {
-  const { tripType, returnTime, ...rest } = b;
+export async function insertBooking(ref: string, b: Booking, quote: (Route & { cents: number }) | null) {
   await api("bookings", {
     method: "POST",
-    body: JSON.stringify({ ref, ...rest, trip_type: tripType, return_time: returnTime || null }),
+    body: JSON.stringify({
+      ref,
+      name: b.name,
+      phone: b.phone,
+      email: b.email,
+      pickup: b.pickup,
+      dropoff: b.dropoff,
+      date: b.date,
+      time: b.time,
+      trip_type: b.tripType,
+      return_time: b.returnTime || null,
+      mobility: b.mobility,
+      companions: b.companions,
+      purpose: b.purpose,
+      notes: b.notes,
+      distance_km: quote ? Number(quote.km.toFixed(2)) : null,
+      duration_min: quote ? Math.round(quote.minutes) : null,
+      quote_cents: quote?.cents ?? null,
+    }),
   });
 }
 
@@ -61,9 +99,21 @@ export async function listBookings(): Promise<BookingRow[]> {
   return r.json();
 }
 
-export async function updateStatus(id: string, status: Status) {
-  await api(`bookings?id=eq.${encodeURIComponent(id)}`, {
+export async function getBooking(ref: string): Promise<TripRow | null> {
+  const r = await api(
+    `bookings?ref=eq.${encodeURIComponent(ref)}&select=*,booking_events(status,at)&limit=1`,
+    { headers: { Prefer: "" } },
+  );
+  const rows: TripRow[] = await r.json();
+  return rows[0] ?? null;
+}
+
+export async function updateStatus(id: string, status: Status): Promise<BookingRow | null> {
+  const r = await api(`bookings?id=eq.${encodeURIComponent(id)}&select=*`, {
     method: "PATCH",
+    headers: { Prefer: "return=representation" },
     body: JSON.stringify({ status }),
   });
+  const rows: BookingRow[] = await r.json();
+  return rows[0] ?? null;
 }
