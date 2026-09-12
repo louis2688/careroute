@@ -187,10 +187,10 @@ export const INTAKE_SCHEMA = {
     returnTime: str("Return pickup time as 24-hour HH:MM for round trips, or empty"),
     tripType: { type: "string", enum: [...TRIP_TYPES, ""], description: "round-trip when a ride back is needed" },
     mobility: { type: "string", enum: [...MOBILITY, ""], description: "wheelchair, stretcher (must lie down), or ambulatory (can walk)" },
-    companions: { type: "integer", minimum: 0, maximum: 3, description: "People riding along, 0 to 3" },
+    companions: { type: "integer", description: "People riding along, a whole number from 0 to 3" },
     purpose: { type: "string", enum: [...PURPOSES, ""], description: "Reason for the trip" },
     notes: str("Anything the driver should know: oxygen, stairs, language, equipment"),
-    days: { type: "array", items: { type: "integer", minimum: 0, maximum: 6 }, description: "Weekdays for a recurring ride, 0 = Sunday. Empty for a single ride" },
+    days: { type: "array", items: { type: "integer" }, description: "Weekdays for a recurring ride as whole numbers 0 to 6, 0 = Sunday. Empty for a single ride" },
     until: str("Last date of a recurring ride as YYYY-MM-DD, or empty"),
   },
 } as const;
