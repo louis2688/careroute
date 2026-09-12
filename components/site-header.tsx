@@ -76,7 +76,6 @@ export function SiteHeader({ name, phone, phoneHref }: { name: string; phone: st
             >
               {t.nav.switchShort}
             </Link>
-            <UserMenu label={t.nav.signIn} />
             <Menu label={t.nav.portals} items={portals} />
             <a
               href={phoneHref}
@@ -85,6 +84,7 @@ export function SiteHeader({ name, phone, phoneHref }: { name: string; phone: st
               <Icon name="phone" className="size-4" />
               {phone}
             </a>
+            <UserMenu label={t.nav.signIn} />
             <Link href={href(lang, "/book")} className="btn-primary text-sm">
               {t.nav.book}
             </Link>
