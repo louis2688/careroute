@@ -2,6 +2,10 @@
 
 Website for a non-emergency medical transportation. Built with Next.js 16, React 19, Tailwind CSS 4, and Supabase (Postgres).
 
+## Languages
+
+English at `/`, Spanish at `/es` (home, services, terms, booking form, tracking page). The header toggle switches between them; static pages stay static. Copy lives in `lib/site.ts` (en) and `lib/site.es.ts` (es); short UI strings in `lib/i18n.ts`. Dispatch, driver, facility, and account pages, plus notifications, are English only.
+
 ## Pages
 
 - `/` company overview: description, mission, vision, services summary, how booking works

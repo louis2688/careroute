@@ -11,13 +11,15 @@ import {
 } from "react";
 import { preconnect } from "react-dom";
 import { Icon } from "@/components/icons";
-import { MAX_SERIES, MOBILITY, PURPOSES, TRIP_TYPES, WEEKDAYS, oneOf, type Intake } from "@/lib/booking";
+import { MAX_SERIES, MOBILITY, PURPOSES, TRIP_TYPES, oneOf, type Intake } from "@/lib/booking";
 import { drivingRoute, searchPlaces, type Place } from "@/lib/geo";
+import { href, ui, type Lang } from "@/lib/i18n";
 import { estimateFare, kmToMiles, money } from "@/lib/pricing";
 import { submitBooking } from "./actions";
 import { parseRideRequest } from "./intake";
 
 type Quote = { km: number; minutes: number; cents: number };
+type AddressKey = "pickup" | "dropoff";
 
 const input =
   "mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:border-sky-700";
@@ -26,14 +28,6 @@ const groupLabel = "text-sm font-medium text-slate-800";
 
 const noop = () => () => {};
 const today = () => new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in local time
-
-const mobilityHelp: Record<(typeof MOBILITY)[number], string> = {
-  ambulatory: "Can walk with little or no help. A cane or walker is fine.",
-  wheelchair: "Rides in a wheelchair, their own or a loaner.",
-  stretcher: "Must stay lying down for the trip.",
-};
-
-type AddressKey = "pickup" | "dropoff";
 
 function Star() {
   return (
@@ -68,14 +62,18 @@ function Field({
 }
 
 export function BookingForm({
+  lang,
   phone,
   phoneHref,
   defaults,
 }: {
+  lang: Lang;
   phone: string;
   phoneHref: string;
   defaults: { name: string; email: string };
 }) {
+  const c = ui[lang].book.form;
+  const k = ui[lang].book.confirm;
   // Warm up the two hosts the form talks to, before the passenger starts typing.
   preconnect("https://photon.komoot.io");
   preconnect("https://router.project-osrm.org");
@@ -174,17 +172,12 @@ export function BookingForm({
   }
 
   async function runIntake() {
-    setIntake({ busy: true, message: "Reading your request…" });
+    setIntake({ busy: true, message: c.assistReading });
     const result = await parseRideRequest(draft).catch(() => null);
-    if (!result) return setIntake({ busy: false, message: "The assistant is unavailable right now. Please fill in the form by hand." });
+    if (!result) return setIntake({ busy: false, message: c.assistUnavailable });
     if (!result.ok) return setIntake({ busy: false, message: result.error });
     const filled = (await applyIntake(result.fields)) ?? 0;
-    setIntake({
-      busy: false,
-      message: filled
-        ? `Filled ${filled} field${filled === 1 ? "" : "s"} below. Check them, add what is missing, then send.`
-        : "Nothing usable found. Please fill in the form by hand.",
-    });
+    setIntake({ busy: false, message: filled ? c.assistFilled(filled) : c.assistNothing });
   }
 
   // One handler for the whole form: address typing fetches suggestions, anything else refreshes the quote.
@@ -212,37 +205,31 @@ export function BookingForm({
   }
 
   if (state?.ok) {
-    const sent = [state.notified.email && "your email", state.notified.sms && "your phone"].filter(Boolean);
+    const sent = [state.notified.email && k.yourEmail, state.notified.sms && k.yourPhone].filter(Boolean);
     return (
       <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-6 sm:p-8">
         <Icon name="check-circle" className="size-10 text-emerald-700" />
-        <h2 className="mt-4 font-heading text-2xl font-bold text-slate-900">Request received</h2>
+        <h2 className="mt-4 font-heading text-2xl font-bold text-slate-900">{k.title}</h2>
         <p className="mt-3 text-slate-700">
-          Your reference number is{" "}
-          <strong className="font-semibold text-slate-900">{state.ref}</strong>. Dispatch will call
-          or email you within one business hour to confirm the pickup window and the price.
-          {sent.length > 0 && ` A confirmation is on its way to ${sent.join(" and ")}.`}
+          {k.ref1} <strong className="font-semibold text-slate-900">{state.ref}</strong>
+          {k.ref2}
+          {sent.length > 0 && k.sentTo(sent.join(` ${k.and} `))}
         </p>
-        {state.count > 1 && (
-          <p className="mt-2 text-slate-700">
-            This standing order has {state.count} rides through {state.until}. Each ride gets its own
-            reference and tracking page; the first one is above.
-          </p>
-        )}
+        {state.count > 1 && <p className="mt-2 text-slate-700">{k.series(state.count, state.until ?? "")}</p>}
         <p className="mt-2 text-slate-700">
-          Need to change something? Call{" "}
+          {k.change1}{" "}
           <a href={phoneHref} className="font-medium text-sky-700 underline">
             {phone}
           </a>{" "}
-          and give the reference number.
+          {k.change2}
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link href={`/trip/${state.ref}`} className="btn-primary">
-            Track your ride
+          <Link href={href(lang, `/trip/${state.ref}`)} className="btn-primary">
+            {k.track}
             <Icon name="arrow-right" className="size-4" />
           </Link>
-          <a href="/book" className="btn-secondary">
-            Book another ride
+          <a href={href(lang, "/book")} className="btn-secondary">
+            {k.another}
           </a>
         </div>
       </div>
@@ -253,11 +240,8 @@ export function BookingForm({
     <form ref={formRef} action={action} onChange={onFormChange} className="space-y-10">
       <section className="rounded-xl border border-sky-200 bg-sky-50 p-4 sm:p-5">
         <label className="block">
-          <span className="font-heading font-semibold text-slate-900">Describe the ride and we fill in the form</span>
-          <span className="mt-1 block text-sm text-slate-600">
-            For example: &ldquo;My mother Rosa needs a wheelchair van from 45 Oak Street to City Dialysis Center,
-            400 Main St, every Monday, Wednesday and Friday at 7am until December. Call 555-010-7788.&rdquo;
-          </span>
+          <span className="font-heading font-semibold text-slate-900">{c.assistTitle}</span>
+          <span className="mt-1 block text-sm text-slate-600">{c.assistExample}</span>
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -268,7 +252,7 @@ export function BookingForm({
         </label>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <button type="button" onClick={runIntake} disabled={intake.busy || draft.trim().length < 10} className="btn-secondary">
-            {intake.busy ? "Reading…" : "Fill in the form"}
+            {intake.busy ? c.assistBusy : c.assistButton}
           </button>
           <p aria-live="polite" className="text-sm text-slate-700">
             {intake.message}
@@ -277,31 +261,30 @@ export function BookingForm({
       </section>
 
       {state && !state.ok && (
-        <p
-          role="alert"
-          className="flex gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"
-        >
+        <p role="alert" className="flex gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
           <Icon name="alert-circle" className="size-5 shrink-0" />
           {state.error}
         </p>
       )}
 
       <fieldset className="space-y-4">
-        <legend className={legend}>Passenger</legend>
+        <legend className={legend}>{c.passenger}</legend>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Full name" required>
+          <Field label={c.fullName} required>
             <input name="name" required autoComplete="name" defaultValue={defaults.name} className={input} />
           </Field>
-          <Field label="Phone number" required hint="We text and call this number about the ride.">
+          <Field label={c.phone} required hint={c.phoneHint}>
             <input name="phone" type="tel" required autoComplete="tel" className={input} />
           </Field>
-          <Field label="Email" required>
+          <Field label={c.email} required>
             <input name="email" type="email" required autoComplete="email" defaultValue={defaults.email} className={input} />
           </Field>
-          <Field label="Reason for the trip">
+          <Field label={c.reason}>
             <select name="purpose" className={input}>
               {PURPOSES.map((p) => (
-                <option key={p}>{p}</option>
+                <option key={p} value={p}>
+                  {c.purposes[p] ?? p}
+                </option>
               ))}
             </select>
           </Field>
@@ -309,9 +292,9 @@ export function BookingForm({
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className={legend}>Trip details</legend>
+        <legend className={legend}>{c.tripDetails}</legend>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Pickup address" required hint="Start typing, then pick from the suggestions.">
+          <Field label={c.pickup} required hint={c.pickupHint}>
             <input name="pickup" list="pickup-list" required autoComplete="off" className={input} />
             <datalist id="pickup-list">
               {options.pickup.map((p) => (
@@ -319,7 +302,7 @@ export function BookingForm({
               ))}
             </datalist>
           </Field>
-          <Field label="Destination" required hint="Facility name or address.">
+          <Field label={c.destination} required hint={c.destinationHint}>
             <input name="dropoff" list="dropoff-list" required autoComplete="off" className={input} />
             <datalist id="dropoff-list">
               {options.dropoff.map((p) => (
@@ -327,51 +310,39 @@ export function BookingForm({
               ))}
             </datalist>
           </Field>
-          <Field label="Appointment date" required>
+          <Field label={c.date} required>
             <input name="date" type="date" required min={minDate} className={input} />
           </Field>
-          <Field label="Pickup time" required hint="We suggest 45 minutes before the appointment.">
+          <Field label={c.time} required hint={c.timeHint}>
             <input name="time" type="time" required className={input} />
           </Field>
           <fieldset>
             <legend className={groupLabel}>
-              Trip type
+              {c.tripType}
               <Star />
             </legend>
             <div className="mt-1.5 flex gap-6">
               <label className="flex min-h-11 cursor-pointer items-center gap-2 text-slate-800">
-                <input
-                  type="radio"
-                  name="tripType"
-                  value="one-way"
-                  required
-                  defaultChecked
-                  className="size-4 accent-sky-700"
-                />
-                One-way
+                <input type="radio" name="tripType" value="one-way" required defaultChecked className="size-4 accent-sky-700" />
+                {c.oneWay}
               </label>
               <label className="flex min-h-11 cursor-pointer items-center gap-2 text-slate-800">
                 <input type="radio" name="tripType" value="round-trip" className="size-4 accent-sky-700" />
-                Round trip
+                {c.roundTrip}
               </label>
             </div>
           </fieldset>
-          <Field
-            label="Return pickup time"
-            hint="Round trips only. Leave blank if the driver should wait."
-          >
+          <Field label={c.returnTime} hint={c.returnHint}>
             <input name="returnTime" type="time" className={input} />
           </Field>
         </div>
         <details className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <summary className="cursor-pointer text-sm font-medium text-slate-900">
-            Repeat this ride (standing order for dialysis, therapy, and other regular visits)
-          </summary>
+          <summary className="cursor-pointer text-sm font-medium text-slate-900">{c.repeat}</summary>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <fieldset>
-              <legend className={groupLabel}>Repeat on</legend>
+              <legend className={groupLabel}>{c.repeatOn}</legend>
               <div className="mt-1.5 flex flex-wrap gap-2">
-                {WEEKDAYS.map((day, i) => (
+                {c.weekdays.map((day, i) => (
                   <label
                     key={day}
                     className="flex min-h-10 cursor-pointer items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-800 has-checked:border-sky-700 has-checked:bg-sky-50"
@@ -382,7 +353,7 @@ export function BookingForm({
                 ))}
               </div>
             </fieldset>
-            <Field label="Until" hint={`Up to 12 weeks or ${MAX_SERIES} rides. The first ride is the appointment date above.`}>
+            <Field label={c.until} hint={c.untilHint(MAX_SERIES)}>
               <input name="until" type="date" min={minDate} className={input} />
             </Field>
           </div>
@@ -394,10 +365,10 @@ export function BookingForm({
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className={legend}>Transportation needs</legend>
+        <legend className={legend}>{c.needs}</legend>
         <fieldset>
           <legend className={groupLabel}>
-            Mobility
+            {c.mobility}
             <Star />
           </legend>
           <div className="mt-1.5 grid gap-3 sm:grid-cols-3">
@@ -406,23 +377,17 @@ export function BookingForm({
                 key={m}
                 className="flex cursor-pointer gap-3 rounded-lg border border-slate-300 bg-white p-3 transition-colors has-checked:border-sky-700 has-checked:bg-sky-50"
               >
-                <input
-                  type="radio"
-                  name="mobility"
-                  value={m}
-                  required
-                  className="mt-1 size-4 shrink-0 accent-sky-700"
-                />
+                <input type="radio" name="mobility" value={m} required className="mt-1 size-4 shrink-0 accent-sky-700" />
                 <span>
-                  <span className="block font-medium text-slate-900 capitalize">{m}</span>
-                  <span className="block text-sm text-slate-600">{mobilityHelp[m]}</span>
+                  <span className="block font-medium text-slate-900">{c.mobilityNames[m]}</span>
+                  <span className="block text-sm text-slate-600">{c.mobilityHelp[m]}</span>
                 </span>
               </label>
             ))}
           </div>
         </fieldset>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Companions" hint="One companion rides free.">
+          <Field label={c.companions} hint={c.companionsHint}>
             <select name="companions" className={input}>
               {[0, 1, 2, 3].map((n) => (
                 <option key={n} value={n}>
@@ -432,10 +397,7 @@ export function BookingForm({
             </select>
           </Field>
         </div>
-        <Field
-          label="Special requirements"
-          hint="Oxygen, bariatric vehicle, loaner wheelchair, stairs at the pickup, preferred language, or anything else the driver should know."
-        >
+        <Field label={c.special} hint={c.specialHint}>
           <textarea name="notes" rows={4} maxLength={2000} className={input} />
         </Field>
       </fieldset>
@@ -443,41 +405,34 @@ export function BookingForm({
       <div className="space-y-5 border-t border-slate-200 pt-6">
         <div aria-live="polite" className="rounded-lg border border-sky-200 bg-sky-50 p-4">
           {quote === "loading" ? (
-            <p className="text-sm text-slate-600">Calculating a fare estimate…</p>
+            <p className="text-sm text-slate-600">{c.calculating}</p>
           ) : quote ? (
             <>
-              <p className="text-sm font-medium text-sky-900">Estimated fare</p>
+              <p className="text-sm font-medium text-sky-900">{c.estimated}</p>
               <p className="mt-1 font-heading text-3xl font-bold text-slate-900">{money(quote.cents)}</p>
               <p className="mt-1 text-sm text-slate-600">
-                {kmToMiles(quote.km).toFixed(1)} miles each way, about {Math.round(quote.minutes)} minutes
-                of driving. Dispatch confirms the final price.
+                {c.fareDetail(kmToMiles(quote.km).toFixed(1), Math.round(quote.minutes))}
               </p>
             </>
           ) : (
-            <p className="text-sm text-slate-600">
-              Pick the pickup and destination from the address suggestions and choose a mobility
-              option to see a fare estimate.
-            </p>
+            <p className="text-sm text-slate-600">{c.pickToSee}</p>
           )}
         </div>
         <label className="flex cursor-pointer items-start gap-3 text-sm text-slate-700">
           <input type="checkbox" name="agree" required className="mt-0.5 size-4 shrink-0 accent-sky-700" />
           <span>
-            I have read and agree to the{" "}
-            <Link href="/terms" className="font-medium text-sky-700 underline">
-              Terms & Conditions
+            {c.agree1}{" "}
+            <Link href={href(lang, "/terms")} className="font-medium text-sky-700 underline">
+              {c.agreeLink}
             </Link>
-            , including the cancellation and no-show policy.
+            {c.agree2}
             <Star />
           </span>
         </label>
         <button type="submit" disabled={pending} className="btn-primary w-full sm:w-auto">
-          {pending ? "Sending request…" : "Submit ride request"}
+          {pending ? c.sending : c.submit}
         </button>
-        <p className="text-sm text-slate-500">
-          This is a request, not a confirmed booking. Dispatch confirms every ride by phone, text,
-          or email.
-        </p>
+        <p className="text-sm text-slate-500">{c.notConfirmed}</p>
       </div>
     </form>
   );

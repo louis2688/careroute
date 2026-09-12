@@ -7,7 +7,7 @@ import { Menu } from "./menu";
 type Me = { email: string; name: string; picture: string } | null;
 
 // Header sign-in state. Pages stay static; this asks /auth/me after the page loads.
-export function UserMenu() {
+export function UserMenu({ label = "Sign in" }: { label?: string }) {
   const [me, setMe] = useState<Me>(null);
   useEffect(() => {
     fetch("/auth/me")
@@ -22,7 +22,7 @@ export function UserMenu() {
         href="/auth/google"
         className="inline-flex min-h-11 items-center rounded-md px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900"
       >
-        Sign in
+        {label}
       </Link>
     );
   }
