@@ -166,6 +166,10 @@ export const findDriversByPin = (pin: string): Promise<Driver[]> =>
 export const getDriver = async (id: string): Promise<Driver | null> =>
   (await read(`drivers?select=*&id=eq.${encodeURIComponent(id)}&limit=1`))[0] ?? null;
 
+// A signed-in passenger's own rides, newest first.
+export const listBookingsByEmail = (email: string): Promise<BookingRow[]> =>
+  read(`bookings?select=*,${DRIVER}&email=eq.${encodeURIComponent(email)}&order=date.desc,time.desc&limit=100`);
+
 export const getBookingById = async (id: string): Promise<BookingRow | null> =>
   (await read(`bookings?select=*&id=eq.${encodeURIComponent(id)}&limit=1`))[0] ?? null;
 

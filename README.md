@@ -13,6 +13,7 @@ Website for a non-emergency medical transportation. Built with Next.js 16, React
 - `/admin/fleet` drivers and vehicles with credential expiry badges (license, CPR, background check, inspection, insurance).
 - `/driver` driver app: sign in with phone + PIN, see assigned rides, tap through en route, picked up, completed. Each tap is GPS-stamped; drop-off captures the passenger's signature.
 - `/admin/export?from=&to=` proof-of-service CSV for billing: timestamps, GPS, driver, fare, signed yes/no.
+- `/account` passenger sign-in with Google. Shows every ride booked with that email, and pre-fills the booking form. Booking never requires an account.
 
 Every status change emails and texts the passenger (Resend and Twilio). Without keys the message prints to the server log.
 
@@ -31,7 +32,8 @@ Open http://localhost:3000.
 | `SUPABASE_URL` | Supabase dashboard, Settings > API, Project URL |
 | `SUPABASE_SECRET_KEY` | Same page, create a secret key (`sb_secret_...`). Server only, never shipped to the browser. Legacy `service_role` keys also work. |
 | `ADMIN_PASSWORD` | Anything you like. The browser asks for it on `/admin` (any username). |
-| `AUTH_SECRET` | Signs driver and facility session cookies. Optional, falls back to `ADMIN_PASSWORD`. |
+| `AUTH_SECRET` | Signs driver, facility, and passenger session cookies. Optional, falls back to `ADMIN_PASSWORD`. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google Cloud Console > Credentials > OAuth client ID (Web application). Add `http://localhost:3000/auth/google/callback` and your production URL + `/auth/google/callback` as authorized redirect URIs. Optional. |
 | `RESEND_API_KEY`, `EMAIL_FROM` | resend.com. Optional. Without a verified domain, Resend only delivers to the account owner's address. |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | twilio.com. Optional. A trial account texts verified numbers only. |
 
@@ -61,6 +63,7 @@ Seeded drivers (phone, PIN): Marco Alvarez 555-010-3001 / 1234, Denise Okafor 55
 - `lib/db.ts` the database calls: insert, list, get by reference, update status.
 - `lib/geo.ts` address search and driving distance. `lib/pricing.ts` the fare table.
 - `lib/notify.ts` email and SMS. `lib/phone.ts` turns typed numbers into E.164.
-- `lib/auth.ts` and `proxy.ts` the shared-password gate on `/admin`. `lib/token.ts` and `lib/session.ts` the signed cookie for drivers and facilities.
+- `lib/auth.ts` and `proxy.ts` the shared-password gate on `/admin`. `lib/token.ts` and `lib/session.ts` the signed cookie for drivers, facilities, and passengers.
+- `app/auth/google/` the Google OAuth code flow in two route handlers, no auth library.
 - `components/signature-pad.tsx` and `components/geo-fields.tsx` proof of service inputs.
 - `components/icons.tsx` inline Lucide icons, no icon package needed.

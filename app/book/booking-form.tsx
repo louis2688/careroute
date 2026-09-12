@@ -66,7 +66,15 @@ function Field({
   );
 }
 
-export function BookingForm({ phone, phoneHref }: { phone: string; phoneHref: string }) {
+export function BookingForm({
+  phone,
+  phoneHref,
+  defaults,
+}: {
+  phone: string;
+  phoneHref: string;
+  defaults: { name: string; email: string };
+}) {
   // Warm up the two hosts the form talks to, before the passenger starts typing.
   preconnect("https://photon.komoot.io");
   preconnect("https://router.project-osrm.org");
@@ -173,13 +181,13 @@ export function BookingForm({ phone, phoneHref }: { phone: string; phoneHref: st
         <legend className={legend}>Passenger</legend>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Full name" required>
-            <input name="name" required autoComplete="name" className={input} />
+            <input name="name" required autoComplete="name" defaultValue={defaults.name} className={input} />
           </Field>
           <Field label="Phone number" required hint="We text and call this number about the ride.">
             <input name="phone" type="tel" required autoComplete="tel" className={input} />
           </Field>
           <Field label="Email" required>
-            <input name="email" type="email" required autoComplete="email" className={input} />
+            <input name="email" type="email" required autoComplete="email" defaultValue={defaults.email} className={input} />
           </Field>
           <Field label="Reason for the trip">
             <select name="purpose" className={input}>

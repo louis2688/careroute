@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import { Icon } from "@/components/icons";
 import { PageHeader } from "@/components/page-header";
+import { getSession } from "@/lib/session";
 import { site } from "@/lib/site";
 import { BookingForm } from "./booking-form";
 
 export const metadata: Metadata = { title: "Book a ride" };
 
-export default function BookPage() {
+export const dynamic = "force-dynamic";
+
+export default async function BookPage() {
+  const user = await getSession("user");
   return (
     <>
       <PageHeader
@@ -16,7 +20,11 @@ export default function BookPage() {
       />
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1fr_20rem] lg:py-16">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-          <BookingForm phone={site.phone} phoneHref={site.phoneHref} />
+          <BookingForm
+            phone={site.phone}
+            phoneHref={site.phoneHref}
+            defaults={{ name: user?.name ?? "", email: user?.id ?? "" }}
+          />
         </div>
         <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-2xl border border-slate-200 bg-white p-6">

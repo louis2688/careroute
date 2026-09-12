@@ -1,13 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Icon } from "./icons";
 
-type Item = readonly [href: string, title: string, description: string];
+type Item = readonly [href: string, title: string, description?: string];
 
 // Small dropdown. Closes on outside click, Escape, or choosing an item.
-export function Menu({ label, items }: { label: string; items: readonly Item[] }) {
+export function Menu({
+  label,
+  items = [],
+  children,
+  className = "",
+}: {
+  label: ReactNode;
+  items?: readonly Item[];
+  children?: ReactNode;
+  className?: string;
+}) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
 
@@ -28,7 +38,7 @@ export function Menu({ label, items }: { label: string; items: readonly Item[] }
   }, [open]);
 
   return (
-    <div ref={root} className="relative">
+    <div ref={root} className={`relative ${className}`}>
       <button
         type="button"
         aria-haspopup="menu"
@@ -50,9 +60,10 @@ export function Menu({ label, items }: { label: string; items: readonly Item[] }
               className="block rounded-lg px-3 py-2 transition-colors hover:bg-slate-50"
             >
               <span className="block text-sm font-medium text-slate-900">{title}</span>
-              <span className="block text-xs text-slate-500">{description}</span>
+              {description && <span className="block text-xs text-slate-500">{description}</span>}
             </Link>
           ))}
+          {children}
         </div>
       )}
     </div>

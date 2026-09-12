@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { Menu } from "@/components/menu";
 import { NavLinks } from "@/components/nav-links";
+import { UserMenu } from "@/components/user-menu";
 import { site } from "@/lib/site";
 import "./globals.css";
 
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <NavLinks />
             </nav>
             <div className="order-2 flex items-center gap-1 sm:order-3 sm:gap-2">
+              <UserMenu />
               <Menu label="Portals" items={portals} />
               <a
                 href={site.phoneHref}
