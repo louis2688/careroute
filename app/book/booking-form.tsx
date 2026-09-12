@@ -22,16 +22,16 @@ type Quote = { km: number; minutes: number; cents: number };
 type AddressKey = "pickup" | "dropoff";
 
 const input =
-  "mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:border-sky-700";
-const legend = "font-heading text-lg font-semibold text-slate-900";
-const groupLabel = "text-sm font-medium text-slate-800";
+  "mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:border-sky-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500";
+const legend = "font-heading text-lg font-semibold text-slate-900 dark:text-slate-100";
+const groupLabel = "text-sm font-medium text-slate-800 dark:text-slate-200";
 
 const noop = () => () => {};
 const today = () => new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in local time
 
 function Star() {
   return (
-    <span aria-hidden="true" className="text-red-600">
+    <span aria-hidden="true" className="text-red-600 dark:text-red-400">
       {" "}
       *
     </span>
@@ -56,7 +56,7 @@ function Field({
         {required && <Star />}
       </span>
       {children}
-      {hint && <span className="mt-1 block text-sm text-slate-500">{hint}</span>}
+      {hint && <span className="mt-1 block text-sm text-slate-500 dark:text-slate-400">{hint}</span>}
     </label>
   );
 }
@@ -207,18 +207,18 @@ export function BookingForm({
   if (state?.ok) {
     const sent = [state.notified.email && k.yourEmail, state.notified.sms && k.yourPhone].filter(Boolean);
     return (
-      <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-6 sm:p-8">
-        <Icon name="check-circle" className="size-10 text-emerald-700" />
-        <h2 className="mt-4 font-heading text-2xl font-bold text-slate-900">{k.title}</h2>
-        <p className="mt-3 text-slate-700">
-          {k.ref1} <strong className="font-semibold text-slate-900">{state.ref}</strong>
+      <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-6 sm:p-8 dark:border-emerald-900 dark:bg-emerald-950">
+        <Icon name="check-circle" className="size-10 text-emerald-700 dark:text-emerald-400" />
+        <h2 className="mt-4 font-heading text-2xl font-bold text-slate-900 dark:text-slate-100">{k.title}</h2>
+        <p className="mt-3 text-slate-700 dark:text-slate-300">
+          {k.ref1} <strong className="font-semibold text-slate-900 dark:text-slate-100">{state.ref}</strong>
           {k.ref2}
           {sent.length > 0 && k.sentTo(sent.join(` ${k.and} `))}
         </p>
-        {state.count > 1 && <p className="mt-2 text-slate-700">{k.series(state.count, state.until ?? "")}</p>}
-        <p className="mt-2 text-slate-700">
+        {state.count > 1 && <p className="mt-2 text-slate-700 dark:text-slate-300">{k.series(state.count, state.until ?? "")}</p>}
+        <p className="mt-2 text-slate-700 dark:text-slate-300">
           {k.change1}{" "}
-          <a href={phoneHref} className="font-medium text-sky-700 underline">
+          <a href={phoneHref} className="font-medium text-sky-700 underline dark:text-sky-400">
             {phone}
           </a>{" "}
           {k.change2}
@@ -238,10 +238,10 @@ export function BookingForm({
 
   return (
     <form ref={formRef} action={action} onChange={onFormChange} className="space-y-10">
-      <section className="rounded-xl border border-sky-200 bg-sky-50 p-4 sm:p-5">
+      <section className="rounded-xl border border-sky-200 bg-sky-50 p-4 sm:p-5 dark:border-sky-900 dark:bg-sky-950">
         <label className="block">
-          <span className="font-heading font-semibold text-slate-900">{c.assistTitle}</span>
-          <span className="mt-1 block text-sm text-slate-600">{c.assistExample}</span>
+          <span className="font-heading font-semibold text-slate-900 dark:text-slate-100">{c.assistTitle}</span>
+          <span className="mt-1 block text-sm text-slate-600 dark:text-slate-400">{c.assistExample}</span>
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -254,14 +254,14 @@ export function BookingForm({
           <button type="button" onClick={runIntake} disabled={intake.busy || draft.trim().length < 10} className="btn-secondary">
             {intake.busy ? c.assistBusy : c.assistButton}
           </button>
-          <p aria-live="polite" className="text-sm text-slate-700">
+          <p aria-live="polite" className="text-sm text-slate-700 dark:text-slate-300">
             {intake.message}
           </p>
         </div>
       </section>
 
       {state && !state.ok && (
-        <p role="alert" className="flex gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="flex gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
           <Icon name="alert-circle" className="size-5 shrink-0" />
           {state.error}
         </p>
@@ -322,11 +322,11 @@ export function BookingForm({
               <Star />
             </legend>
             <div className="mt-1.5 flex gap-6">
-              <label className="flex min-h-11 cursor-pointer items-center gap-2 text-slate-800">
+              <label className="flex min-h-11 cursor-pointer items-center gap-2 text-slate-800 dark:text-slate-200">
                 <input type="radio" name="tripType" value="one-way" required defaultChecked className="size-4 accent-sky-700" />
                 {c.oneWay}
               </label>
-              <label className="flex min-h-11 cursor-pointer items-center gap-2 text-slate-800">
+              <label className="flex min-h-11 cursor-pointer items-center gap-2 text-slate-800 dark:text-slate-200">
                 <input type="radio" name="tripType" value="round-trip" className="size-4 accent-sky-700" />
                 {c.roundTrip}
               </label>
@@ -336,8 +336,8 @@ export function BookingForm({
             <input name="returnTime" type="time" className={input} />
           </Field>
         </div>
-        <details className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <summary className="cursor-pointer text-sm font-medium text-slate-900">{c.repeat}</summary>
+        <details className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
+          <summary className="cursor-pointer text-sm font-medium text-slate-900 dark:text-slate-100">{c.repeat}</summary>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <fieldset>
               <legend className={groupLabel}>{c.repeatOn}</legend>
@@ -345,7 +345,7 @@ export function BookingForm({
                 {c.weekdays.map((day, i) => (
                   <label
                     key={day}
-                    className="flex min-h-10 cursor-pointer items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-800 has-checked:border-sky-700 has-checked:bg-sky-50"
+                    className="flex min-h-10 cursor-pointer items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-800 has-checked:border-sky-700 has-checked:bg-sky-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:has-checked:bg-sky-950"
                   >
                     <input type="checkbox" name="days" value={i} className="size-4 accent-sky-700" />
                     {day}
@@ -375,12 +375,12 @@ export function BookingForm({
             {MOBILITY.map((m) => (
               <label
                 key={m}
-                className="flex cursor-pointer gap-3 rounded-lg border border-slate-300 bg-white p-3 transition-colors has-checked:border-sky-700 has-checked:bg-sky-50"
+                className="flex cursor-pointer gap-3 rounded-lg border border-slate-300 bg-white p-3 transition-colors has-checked:border-sky-700 has-checked:bg-sky-50 dark:border-slate-700 dark:bg-slate-900 dark:has-checked:bg-sky-950"
               >
                 <input type="radio" name="mobility" value={m} required className="mt-1 size-4 shrink-0 accent-sky-700" />
                 <span>
-                  <span className="block font-medium text-slate-900">{c.mobilityNames[m]}</span>
-                  <span className="block text-sm text-slate-600">{c.mobilityHelp[m]}</span>
+                  <span className="block font-medium text-slate-900 dark:text-slate-100">{c.mobilityNames[m]}</span>
+                  <span className="block text-sm text-slate-600 dark:text-slate-400">{c.mobilityHelp[m]}</span>
                 </span>
               </label>
             ))}
@@ -402,27 +402,27 @@ export function BookingForm({
         </Field>
       </fieldset>
 
-      <div className="space-y-5 border-t border-slate-200 pt-6">
-        <div aria-live="polite" className="rounded-lg border border-sky-200 bg-sky-50 p-4">
+      <div className="space-y-5 border-t border-slate-200 pt-6 dark:border-slate-800">
+        <div aria-live="polite" className="rounded-lg border border-sky-200 bg-sky-50 p-4 dark:border-sky-900 dark:bg-sky-950">
           {quote === "loading" ? (
-            <p className="text-sm text-slate-600">{c.calculating}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">{c.calculating}</p>
           ) : quote ? (
             <>
-              <p className="text-sm font-medium text-sky-900">{c.estimated}</p>
-              <p className="mt-1 font-heading text-3xl font-bold text-slate-900">{money(quote.cents)}</p>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="text-sm font-medium text-sky-900 dark:text-sky-200">{c.estimated}</p>
+              <p className="mt-1 font-heading text-3xl font-bold text-slate-900 dark:text-slate-100">{money(quote.cents)}</p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                 {c.fareDetail(kmToMiles(quote.km).toFixed(1), Math.round(quote.minutes))}
               </p>
             </>
           ) : (
-            <p className="text-sm text-slate-600">{c.pickToSee}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">{c.pickToSee}</p>
           )}
         </div>
-        <label className="flex cursor-pointer items-start gap-3 text-sm text-slate-700">
+        <label className="flex cursor-pointer items-start gap-3 text-sm text-slate-700 dark:text-slate-300">
           <input type="checkbox" name="agree" required className="mt-0.5 size-4 shrink-0 accent-sky-700" />
           <span>
             {c.agree1}{" "}
-            <Link href={href(lang, "/terms")} className="font-medium text-sky-700 underline">
+            <Link href={href(lang, "/terms")} className="font-medium text-sky-700 underline dark:text-sky-400">
               {c.agreeLink}
             </Link>
             {c.agree2}
@@ -432,7 +432,7 @@ export function BookingForm({
         <button type="submit" disabled={pending} className="btn-primary w-full sm:w-auto">
           {pending ? c.sending : c.submit}
         </button>
-        <p className="text-sm text-slate-500">{c.notConfirmed}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{c.notConfirmed}</p>
       </div>
     </form>
   );

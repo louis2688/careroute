@@ -8,29 +8,29 @@ export const metadata: Metadata = { title: "Drivers & fleet", robots: { index: f
 export const dynamic = "force-dynamic";
 
 const tone: Record<Tone, string> = {
-  expired: "bg-red-100 text-red-800",
-  soon: "bg-amber-100 text-amber-900",
-  ok: "bg-emerald-50 text-emerald-800",
-  missing: "bg-slate-100 text-slate-600",
+  expired: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  soon: "bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100",
+  ok: "bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
+  missing: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
 };
 const toneLabel: Record<Tone, string> = { expired: "Expired", soon: "Due soon", ok: "Valid", missing: "Missing" };
 
 const input =
-  "mt-1 block w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 focus:border-sky-700";
+  "mt-1 block w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 focus:border-sky-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100";
 
 function DriverForm({ driver }: { driver?: Driver }) {
   return (
     <form action={saveDriver} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {driver && <input type="hidden" name="id" value={driver.id} />}
-      <label className="text-sm font-medium text-slate-800">
+      <label className="text-sm font-medium text-slate-800 dark:text-slate-200">
         Name
         <input name="name" required defaultValue={driver?.name} className={input} />
       </label>
-      <label className="text-sm font-medium text-slate-800">
+      <label className="text-sm font-medium text-slate-800 dark:text-slate-200">
         Phone
         <input name="phone" type="tel" required defaultValue={driver?.phone} className={input} />
       </label>
-      <label className="text-sm font-medium text-slate-800">
+      <label className="text-sm font-medium text-slate-800 dark:text-slate-200">
         Vehicle
         <select name="vehicle_type" defaultValue={driver?.vehicle_type ?? "wheelchair"} className={input}>
           {MOBILITY.map((m) => (
@@ -40,21 +40,21 @@ function DriverForm({ driver }: { driver?: Driver }) {
           ))}
         </select>
       </label>
-      <label className="text-sm font-medium text-slate-800">
+      <label className="text-sm font-medium text-slate-800 dark:text-slate-200">
         Plate
         <input name="plate" required defaultValue={driver?.plate} className={input} />
       </label>
       {CREDENTIALS.map(([key, label]) => (
-        <label key={key} className="text-sm font-medium text-slate-800">
+        <label key={key} className="text-sm font-medium text-slate-800 dark:text-slate-200">
           {label} expires
           <input name={key} type="date" defaultValue={driver?.[key] ?? ""} className={input} />
         </label>
       ))}
-      <label className="text-sm font-medium text-slate-800">
-        Driver app PIN {driver && <span className="font-normal text-slate-500">(blank keeps {driver.pin})</span>}
+      <label className="text-sm font-medium text-slate-800 dark:text-slate-200">
+        Driver app PIN {driver && <span className="font-normal text-slate-500 dark:text-slate-400">(blank keeps {driver.pin})</span>}
         <input name="pin" inputMode="numeric" pattern="\d{4,8}" required={!driver} className={input} />
       </label>
-      <label className="flex items-center gap-2 self-end pb-2 text-sm font-medium text-slate-800">
+      <label className="flex items-center gap-2 self-end pb-2 text-sm font-medium text-slate-800 dark:text-slate-200">
         <input type="checkbox" name="active" defaultChecked={driver ? driver.active : true} className="size-4 accent-sky-700" />
         Active
       </label>
@@ -84,30 +84,30 @@ export default async function FleetPage() {
     <div className="pb-10">
       <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-heading text-3xl font-bold tracking-tight text-slate-900">Drivers & fleet</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="font-heading text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Drivers & fleet</h1>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
             {drivers.filter((d) => d.active).length} active drivers.{" "}
-            <span className={expired ? "font-semibold text-red-700" : ""}>{expired} credentials expired</span>,{" "}
-            <span className={soon ? "font-semibold text-amber-800" : ""}>{soon} due within 30 days</span>.
+            <span className={expired ? "font-semibold text-red-700 dark:text-red-300" : ""}>{expired} credentials expired</span>,{" "}
+            <span className={soon ? "font-semibold text-amber-800 dark:text-amber-200" : ""}>{soon} due within 30 days</span>.
           </p>
         </div>
       </div>
 
-      <details className="mt-6 rounded-xl border border-slate-200 bg-white p-4">
-        <summary className="cursor-pointer font-medium text-slate-900">Add a driver</summary>
+      <details className="mt-6 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <summary className="cursor-pointer font-medium text-slate-900 dark:text-slate-100">Add a driver</summary>
         <div className="mt-4">
           <DriverForm />
         </div>
       </details>
 
       {error ? (
-        <p role="alert" className="mt-8 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <p role="alert" className="mt-8 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
           Could not load drivers. {error}
         </p>
       ) : (
-        <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
           <table className="w-full min-w-[64rem] text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs tracking-wide text-slate-600 uppercase">
+            <thead className="border-b border-slate-200 bg-slate-50 text-xs tracking-wide text-slate-600 uppercase dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
               <tr>
                 <th className="px-4 py-3 font-semibold">Driver</th>
                 <th className="px-4 py-3 font-semibold">Vehicle</th>
@@ -121,19 +121,19 @@ export default async function FleetPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 align-top">
+            <tbody className="divide-y divide-slate-100 align-top dark:divide-slate-800">
               {drivers.map((d) => (
                 <tr key={d.id} className={d.active ? "" : "opacity-60"}>
                   <td className="px-4 py-3">
-                    <p className="font-medium text-slate-900">
+                    <p className="font-medium text-slate-900 dark:text-slate-100">
                       {d.name}
-                      {!d.active && <span className="ml-2 text-xs text-slate-500">inactive</span>}
+                      {!d.active && <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">inactive</span>}
                     </p>
-                    <p className="text-slate-600">{d.phone}</p>
+                    <p className="text-slate-600 dark:text-slate-400">{d.phone}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="text-slate-900 capitalize">{d.vehicle_type}</p>
-                    <p className="text-slate-600">{d.plate}</p>
+                    <p className="text-slate-900 capitalize dark:text-slate-100">{d.vehicle_type}</p>
+                    <p className="text-slate-600 dark:text-slate-400">{d.plate}</p>
                   </td>
                   {CREDENTIALS.map(([k]) => {
                     const t = expiryTone(d[k], today);
@@ -142,13 +142,13 @@ export default async function FleetPage() {
                         <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${tone[t]}`}>
                           {toneLabel[t]}
                         </span>
-                        <p className="mt-1 text-xs text-slate-500">{d[k] ?? "no date"}</p>
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{d[k] ?? "no date"}</p>
                       </td>
                     );
                   })}
                   <td className="px-4 py-3">
                     <details>
-                      <summary className="cursor-pointer text-sm font-medium text-sky-700">Edit</summary>
+                      <summary className="cursor-pointer text-sm font-medium text-sky-700 dark:text-sky-400">Edit</summary>
                       <div className="mt-3 w-[56rem] max-w-[80vw]">
                         <DriverForm driver={d} />
                       </div>

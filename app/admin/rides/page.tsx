@@ -19,12 +19,12 @@ export const metadata: Metadata = { title: "Ride requests", robots: { index: fal
 export const dynamic = "force-dynamic";
 
 const badge: Record<Status, string> = {
-  new: "bg-amber-100 text-amber-900",
-  confirmed: "bg-emerald-100 text-emerald-900",
-  en_route: "bg-sky-100 text-sky-900",
-  picked_up: "bg-violet-100 text-violet-900",
-  completed: "bg-slate-800 text-white",
-  cancelled: "bg-slate-200 text-slate-700",
+  new: "bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100",
+  confirmed: "bg-emerald-100 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100",
+  en_route: "bg-sky-100 text-sky-900 dark:bg-sky-900 dark:text-sky-200",
+  picked_up: "bg-violet-100 text-violet-900 dark:bg-violet-900 dark:text-violet-100",
+  completed: "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900",
+  cancelled: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300",
 };
 
 const when = (iso: string) =>
@@ -37,7 +37,7 @@ const when = (iso: string) =>
   });
 
 const select =
-  "rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus:border-sky-700";
+  "rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus:border-sky-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100";
 
 export default async function AdminPage({
   searchParams,
@@ -64,17 +64,17 @@ export default async function AdminPage({
     <div className="pb-10">
       <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-heading text-3xl font-bold tracking-tight text-slate-900">
+          <h1 className="font-heading text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
             {date ? `Schedule for ${date}` : "Ride requests"}
           </h1>
-          <p className="mt-1 text-sm text-slate-600">
-            {rows.length} rides, <span className="font-semibold text-slate-900">{open} waiting for confirmation</span>,{" "}
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            {rows.length} rides, <span className="font-semibold text-slate-900 dark:text-slate-100">{open} waiting for confirmation</span>,{" "}
             {unassigned} without a driver
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-4">
           <form method="get" className="flex flex-wrap items-end gap-2">
-            <label className="text-sm font-medium text-slate-800">
+            <label className="text-sm font-medium text-slate-800 dark:text-slate-200">
               Day
               <input type="date" name="date" defaultValue={date} className={`${select} mt-1 block`} />
             </label>
@@ -86,11 +86,11 @@ export default async function AdminPage({
             )}
           </form>
           <form method="get" action="/admin/export" className="flex flex-wrap items-end gap-2">
-            <label className="text-sm font-medium text-slate-800">
+            <label className="text-sm font-medium text-slate-800 dark:text-slate-200">
               From
               <input type="date" name="from" defaultValue={date} className={`${select} mt-1 block`} />
             </label>
-            <label className="text-sm font-medium text-slate-800">
+            <label className="text-sm font-medium text-slate-800 dark:text-slate-200">
               To
               <input type="date" name="to" defaultValue={date} className={`${select} mt-1 block`} />
             </label>
@@ -99,23 +99,23 @@ export default async function AdminPage({
         </div>
       </div>
 
-      <p className="mt-4 text-sm text-slate-600">
+      <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">
         Passenger notifications: email {ch.email ? "on" : "off"}, SMS {ch.sms ? "on" : "off"}.
         {!(ch.email && ch.sms) && " Channels that are off print the message to the server log instead. Add the Resend and Twilio keys to switch them on."}
       </p>
 
       {error ? (
-        <p role="alert" className="mt-8 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <p role="alert" className="mt-8 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
           Could not load bookings. {error}
         </p>
       ) : rows.length === 0 ? (
-        <p className="mt-8 rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-600">
+        <p className="mt-8 rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
           {date ? `No rides on ${date}.` : "No ride requests yet. New submissions from the booking form show up here."}
         </p>
       ) : (
-        <div className="mt-8 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <div className="mt-8 overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
           <table className="w-full min-w-[80rem] text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs tracking-wide text-slate-600 uppercase">
+            <thead className="border-b border-slate-200 bg-slate-50 text-xs tracking-wide text-slate-600 uppercase dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
               <tr>
                 <th className="px-4 py-3 font-semibold">Ref</th>
                 <th className="px-4 py-3 font-semibold">Passenger</th>
@@ -129,7 +129,7 @@ export default async function AdminPage({
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 align-top">
+            <tbody className="divide-y divide-slate-100 align-top dark:divide-slate-800">
               {rows.map((r) => {
                 const next = NEXT_STEP[r.status];
                 const closed = r.status === "completed" || r.status === "cancelled";
@@ -140,55 +140,55 @@ export default async function AdminPage({
                 return (
                   <tr key={r.id}>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <Link href={`/trip/${r.ref}`} className="font-mono font-semibold text-sky-700 hover:underline">
+                      <Link href={`/trip/${r.ref}`} className="font-mono font-semibold text-sky-700 hover:underline dark:text-sky-400">
                         {r.ref}
                       </Link>
-                      <p className="mt-0.5 text-xs text-slate-500">{when(r.created_at)}</p>
+                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{when(r.created_at)}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-medium text-slate-900">{r.name}</p>
-                      <p className="text-slate-600">
+                      <p className="font-medium text-slate-900 dark:text-slate-100">{r.name}</p>
+                      <p className="text-slate-600 dark:text-slate-400">
                         <a href={`tel:${r.phone}`} className="hover:underline">{r.phone}</a>
                       </p>
-                      <p className="text-slate-600">
+                      <p className="text-slate-600 dark:text-slate-400">
                         <a href={`mailto:${r.email}`} className="hover:underline">{r.email}</a>
                       </p>
                     </td>
                     <td className="max-w-xs px-4 py-3">
-                      <p className="text-slate-900">{r.pickup}</p>
-                      <p className="text-slate-500">to {r.dropoff}</p>
+                      <p className="text-slate-900 dark:text-slate-100">{r.pickup}</p>
+                      <p className="text-slate-500 dark:text-slate-400">to {r.dropoff}</p>
                       {r.quote_cents != null && r.distance_km != null && (
-                        <p className="mt-1 text-slate-700">
+                        <p className="mt-1 text-slate-700 dark:text-slate-300">
                           Est. {money(r.quote_cents)}, {kmToMiles(r.distance_km).toFixed(1)} mi
                         </p>
                       )}
-                      {r.notes && <p className="mt-1 text-xs text-slate-600">Note: {r.notes}</p>}
+                      {r.notes && <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Note: {r.notes}</p>}
                       {(r.series_id || r.facility) && (
                         <p className="mt-1 flex flex-wrap gap-1">
-                          {r.series_id && <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-800">Standing order</span>}
-                          {r.facility && <span className="rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800">{r.facility.name}</span>}
+                          {r.series_id && <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200">Standing order</span>}
+                          {r.facility && <span className="rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800 dark:bg-teal-950 dark:text-teal-200">{r.facility.name}</span>}
                         </p>
                       )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <p className="text-slate-900">{r.date}</p>
-                      <p className="text-slate-600">
+                      <p className="text-slate-900 dark:text-slate-100">{r.date}</p>
+                      <p className="text-slate-600 dark:text-slate-400">
                         {r.time.slice(0, 5)} {r.trip_type === "round-trip" ? "round trip" : "one-way"}
                       </p>
-                      {r.return_time && <p className="text-slate-600">return {r.return_time.slice(0, 5)}</p>}
+                      {r.return_time && <p className="text-slate-600 dark:text-slate-400">return {r.return_time.slice(0, 5)}</p>}
                     </td>
                     <td className="px-4 py-3">
-                      <p className="text-slate-900 capitalize">{r.mobility}</p>
-                      <p className="text-slate-600">{r.purpose}</p>
+                      <p className="text-slate-900 capitalize dark:text-slate-100">{r.mobility}</p>
+                      <p className="text-slate-600 dark:text-slate-400">{r.purpose}</p>
                       {r.companions > 0 && (
-                        <p className="text-slate-600">
+                        <p className="text-slate-600 dark:text-slate-400">
                           {r.companions} companion{r.companions > 1 ? "s" : ""}
                         </p>
                       )}
                     </td>
                     <td className="px-4 py-3">
                       {closed ? (
-                        <p className="text-slate-700">{r.driver?.name ?? "Unassigned"}</p>
+                        <p className="text-slate-700 dark:text-slate-300">{r.driver?.name ?? "Unassigned"}</p>
                       ) : (
                         <form action={assignDriver}>
                           <input type="hidden" name="id" value={r.id} />
@@ -214,7 +214,7 @@ export default async function AdminPage({
                       </span>
                       {r.signature && (
                         // eslint-disable-next-line @next/next/no-img-element -- data URL drawn by the passenger
-                        <img src={r.signature} alt="Passenger signature" className="mt-2 h-10 rounded border border-slate-200 bg-white" />
+                        <img src={r.signature} alt="Passenger signature" className="mt-2 h-10 rounded border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" />
                       )}
                     </td>
                     <td className="px-4 py-3">

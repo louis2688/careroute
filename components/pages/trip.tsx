@@ -35,18 +35,18 @@ export async function TripPage({ code, lang }: { code: string; lang: Lang }) {
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:py-16">
       <AutoRefresh seconds={30} />
-      <p className="text-sm font-semibold tracking-wide text-sky-700 uppercase">
+      <p className="text-sm font-semibold tracking-wide text-sky-700 uppercase dark:text-sky-400">
         {t.ride} {trip.ref}
       </p>
-      <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+      <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl dark:text-slate-100">
         {cancelled ? t.cancelledTitle : t.statuses[trip.status]}
       </h1>
-      <p className="mt-3 text-slate-600">
+      <p className="mt-3 text-slate-600 dark:text-slate-400">
         {t.hi} {first}. {t.refreshes}
       </p>
 
       <div className="mt-8 grid gap-6 md:grid-cols-[1fr_18rem]">
-        <ol className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+        <ol className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 dark:border-slate-800 dark:bg-slate-900">
           {STEPS.map((s, i) => {
             const done = i < reached;
             const current = !cancelled && trip.status !== "completed" && i === reached - 1;
@@ -54,87 +54,87 @@ export async function TripPage({ code, lang }: { code: string; lang: Lang }) {
               <li key={s} className="flex gap-4">
                 <span
                   className={`grid size-9 shrink-0 place-items-center rounded-full font-heading font-bold ${
-                    done ? "bg-sky-700 text-white" : "border-2 border-slate-300 bg-white text-slate-400"
+                    done ? "bg-sky-700 text-white" : "border-2 border-slate-300 bg-white text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500"
                   }`}
                 >
                   {done ? <Icon name="check" className="size-5" /> : i + 1}
                 </span>
                 <div>
-                  <p className={`font-medium ${done ? "text-slate-900" : "text-slate-500"}`}>
+                  <p className={`font-medium ${done ? "text-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"}`}>
                     {t.statuses[s]}
                     {current && (
-                      <span className="ml-2 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-900">
+                      <span className="ml-2 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-900 dark:bg-sky-900 dark:text-sky-200">
                         {t.now}
                       </span>
                     )}
                   </p>
-                  <p className="text-sm text-slate-500">{at[s] ? fmt(at[s]) : t.pending}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{at[s] ? fmt(at[s]) : t.pending}</p>
                 </div>
               </li>
             );
           })}
           {cancelled && (
             <li className="flex gap-4">
-              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-red-100 text-red-700">
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">
                 <Icon name="alert-circle" className="size-5" />
               </span>
               <div>
-                <p className="font-medium text-slate-900">{t.cancelled}</p>
-                <p className="text-sm text-slate-500">{at.cancelled ? fmt(at.cancelled) : ""}</p>
+                <p className="font-medium text-slate-900 dark:text-slate-100">{t.cancelled}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{at.cancelled ? fmt(at.cancelled) : ""}</p>
               </div>
             </li>
           )}
         </ol>
 
-        <aside className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 text-sm md:self-start">
+        <aside className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 text-sm md:self-start dark:border-slate-800 dark:bg-slate-900">
           <div>
-            <p className="font-semibold text-slate-900">{t.pickup}</p>
-            <p className="text-slate-600">
+            <p className="font-semibold text-slate-900 dark:text-slate-100">{t.pickup}</p>
+            <p className="text-slate-600 dark:text-slate-400">
               {trip.date} · {trip.time.slice(0, 5)}
               {trip.trip_type === "round-trip" ? t.roundTrip : ""}
             </p>
-            <p className="mt-1 text-slate-600">{trip.pickup}</p>
+            <p className="mt-1 text-slate-600 dark:text-slate-400">{trip.pickup}</p>
           </div>
           <div>
-            <p className="font-semibold text-slate-900">{t.destination}</p>
-            <p className="text-slate-600">{trip.dropoff}</p>
+            <p className="font-semibold text-slate-900 dark:text-slate-100">{t.destination}</p>
+            <p className="text-slate-600 dark:text-slate-400">{trip.dropoff}</p>
           </div>
           <div>
-            <p className="font-semibold text-slate-900">{t.vehicle}</p>
-            <p className="text-slate-600">
+            <p className="font-semibold text-slate-900 dark:text-slate-100">{t.vehicle}</p>
+            <p className="text-slate-600 dark:text-slate-400">
               {mobility}
               {trip.companions > 0 && t.companion(trip.companions)}
             </p>
           </div>
           {trip.driver && (
             <div>
-              <p className="font-semibold text-slate-900">{t.driver}</p>
-              <p className="text-slate-600">
+              <p className="font-semibold text-slate-900 dark:text-slate-100">{t.driver}</p>
+              <p className="text-slate-600 dark:text-slate-400">
                 {t.driverLine(trip.driver.name, ui[lang].book.form.mobilityNames[trip.driver.vehicle_type].toLowerCase(), trip.driver.plate)}
               </p>
             </div>
           )}
           {trip.quote_cents != null && trip.distance_km != null && (
             <div>
-              <p className="font-semibold text-slate-900">{t.fare}</p>
-              <p className="text-slate-600">
+              <p className="font-semibold text-slate-900 dark:text-slate-100">{t.fare}</p>
+              <p className="text-slate-600 dark:text-slate-400">
                 {money(trip.quote_cents)}, {t.milesEachWay(kmToMiles(trip.distance_km).toFixed(1))}
               </p>
             </div>
           )}
           {series.length > 1 && (
             <div>
-              <p className="font-semibold text-slate-900">{t.standing}</p>
-              <p className="text-slate-600">{t.onSchedule(series.length)}</p>
-              <ul className="mt-1 max-h-40 space-y-0.5 overflow-y-auto text-xs text-slate-600">
+              <p className="font-semibold text-slate-900 dark:text-slate-100">{t.standing}</p>
+              <p className="text-slate-600 dark:text-slate-400">{t.onSchedule(series.length)}</p>
+              <ul className="mt-1 max-h-40 space-y-0.5 overflow-y-auto text-xs text-slate-600 dark:text-slate-400">
                 {series.map((s) => (
                   <li key={s.ref}>
                     {s.ref === trip.ref ? (
-                      <span className="font-semibold text-slate-900">
+                      <span className="font-semibold text-slate-900 dark:text-slate-100">
                         {s.date} {t.thisRide}
                       </span>
                     ) : (
-                      <Link href={href(lang, `/trip/${s.ref}`)} className="text-sky-700 hover:underline">
+                      <Link href={href(lang, `/trip/${s.ref}`)} className="text-sky-700 hover:underline dark:text-sky-400">
                         {s.date}
                       </Link>
                     )}{" "}
@@ -146,13 +146,13 @@ export async function TripPage({ code, lang }: { code: string; lang: Lang }) {
           )}
           {trip.facility && (
             <div>
-              <p className="font-semibold text-slate-900">{t.bookedBy}</p>
-              <p className="text-slate-600">{trip.facility.name}</p>
+              <p className="font-semibold text-slate-900 dark:text-slate-100">{t.bookedBy}</p>
+              <p className="text-slate-600 dark:text-slate-400">{trip.facility.name}</p>
             </div>
           )}
-          <p className="border-t border-slate-200 pt-4 text-slate-600">
+          <p className="border-t border-slate-200 pt-4 text-slate-600 dark:border-slate-800 dark:text-slate-400">
             {t.change1}{" "}
-            <a href={site.phoneHref} className="font-medium text-sky-700 underline">
+            <a href={site.phoneHref} className="font-medium text-sky-700 underline dark:text-sky-400">
               {site.phone}
             </a>{" "}
             {t.change2} {trip.ref}.

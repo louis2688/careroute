@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Figtree, Noto_Sans } from "next/font/google";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { themeInitScript } from "@/components/theme-toggle";
 import { site } from "@/lib/site";
 import { siteEs } from "@/lib/site.es";
 import "./globals.css";
@@ -19,8 +20,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${figtree.variable} ${noto.variable} h-full`}>
+    // suppressHydrationWarning: the theme script adds "dark" to <html> before React hydrates.
+    <html lang="en" className={`${figtree.variable} ${noto.variable} h-full`} suppressHydrationWarning>
       <body className="flex min-h-full flex-col">
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <SiteHeader name={site.name} phone={site.phone} phoneHref={site.phoneHref} />
         <main id="main" className="flex-1">
           {children}
