@@ -72,18 +72,31 @@ export default async function AdminPage({
             {unassigned} without a driver
           </p>
         </div>
-        <form method="get" className="flex flex-wrap items-end gap-2">
-          <label className="text-sm font-medium text-slate-800">
-            Day
-            <input type="date" name="date" defaultValue={date} className={`${select} mt-1 block`} />
-          </label>
-          <button className="btn-secondary min-h-9 px-3 py-1.5 text-sm">Show</button>
-          {date && (
-            <Link href="/admin" className="btn-secondary min-h-9 px-3 py-1.5 text-sm">
-              Newest first
-            </Link>
-          )}
-        </form>
+        <div className="flex flex-wrap items-end gap-4">
+          <form method="get" className="flex flex-wrap items-end gap-2">
+            <label className="text-sm font-medium text-slate-800">
+              Day
+              <input type="date" name="date" defaultValue={date} className={`${select} mt-1 block`} />
+            </label>
+            <button className="btn-secondary min-h-9 px-3 py-1.5 text-sm">Show</button>
+            {date && (
+              <Link href="/admin" className="btn-secondary min-h-9 px-3 py-1.5 text-sm">
+                Newest first
+              </Link>
+            )}
+          </form>
+          <form method="get" action="/admin/export" className="flex flex-wrap items-end gap-2">
+            <label className="text-sm font-medium text-slate-800">
+              From
+              <input type="date" name="from" defaultValue={date} className={`${select} mt-1 block`} />
+            </label>
+            <label className="text-sm font-medium text-slate-800">
+              To
+              <input type="date" name="to" defaultValue={date} className={`${select} mt-1 block`} />
+            </label>
+            <button className="btn-secondary min-h-9 px-3 py-1.5 text-sm">Export CSV</button>
+          </form>
+        </div>
       </div>
 
       <p className="mt-4 text-sm text-slate-600">
@@ -193,6 +206,10 @@ export default async function AdminPage({
                       <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge[r.status]}`}>
                         {STATUS_LABEL[r.status]}
                       </span>
+                      {r.signature && (
+                        // eslint-disable-next-line @next/next/no-img-element -- data URL drawn by the passenger
+                        <img src={r.signature} alt="Passenger signature" className="mt-2 h-10 rounded border border-slate-200 bg-white" />
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {!closed && (

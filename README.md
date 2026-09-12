@@ -9,7 +9,10 @@ Website for a non-emergency medical transportation. Built with Next.js 16, React
 - `/terms` terms and conditions of service
 - `/book` ride request form with address suggestions and a live fare estimate. Validated on the server, saved to Postgres, returns a reference number
 - `/trip/CR-XXXXXXXX` passenger tracking page: request received, confirmed, driver on the way, completed. Refreshes itself.
-- `/admin` dispatch view: every request, newest first, with confirm, en route, complete, and cancel buttons. Password protected.
+- `/admin` dispatch board: every request, day view, driver assignment, status buttons, CSV export. Password protected.
+- `/admin/fleet` drivers and vehicles with credential expiry badges (license, CPR, background check, inspection, insurance).
+- `/driver` driver app: sign in with phone + PIN, see assigned rides, tap through en route, picked up, completed. Each tap is GPS-stamped; drop-off captures the passenger's signature.
+- `/admin/export?from=&to=` proof-of-service CSV for billing: timestamps, GPS, driver, fare, signed yes/no.
 
 Every status change emails and texts the passenger (Resend and Twilio). Without keys the message prints to the server log.
 
@@ -28,6 +31,7 @@ Open http://localhost:3000.
 | `SUPABASE_URL` | Supabase dashboard, Settings > API, Project URL |
 | `SUPABASE_SECRET_KEY` | Same page, create a secret key (`sb_secret_...`). Server only, never shipped to the browser. Legacy `service_role` keys also work. |
 | `ADMIN_PASSWORD` | Anything you like. The browser asks for it on `/admin` (any username). |
+| `AUTH_SECRET` | Signs driver and facility session cookies. Optional, falls back to `ADMIN_PASSWORD`. |
 | `RESEND_API_KEY`, `EMAIL_FROM` | resend.com. Optional. Without a verified domain, Resend only delivers to the account owner's address. |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | twilio.com. Optional. A trial account texts verified numbers only. |
 
@@ -46,6 +50,10 @@ Address suggestions and distances come from free OpenStreetMap services (Photon 
 
 Database schema lives in the Supabase migrations `create_bookings` and `trip_status_and_quotes`.
 
+## Demo logins
+
+Seeded drivers (phone, PIN): Marco Alvarez 555-010-3001 / 1234, Denise Okafor 555-010-3002 / 2345, Sam Whitfield 555-010-3003 / 3456. Change them on `/admin/fleet`.
+
 ## Where things live
 
 - `lib/site.ts` all copy: company name, contact details, services, terms. Rebranding is a one-file edit.
@@ -53,5 +61,6 @@ Database schema lives in the Supabase migrations `create_bookings` and `trip_sta
 - `lib/db.ts` the database calls: insert, list, get by reference, update status.
 - `lib/geo.ts` address search and driving distance. `lib/pricing.ts` the fare table.
 - `lib/notify.ts` email and SMS. `lib/phone.ts` turns typed numbers into E.164.
-- `lib/auth.ts` and `proxy.ts` the shared-password gate on `/admin`.
+- `lib/auth.ts` and `proxy.ts` the shared-password gate on `/admin`. `lib/token.ts` and `lib/session.ts` the signed cookie for drivers and facilities.
+- `components/signature-pad.tsx` and `components/geo-fields.tsx` proof of service inputs.
 - `components/icons.tsx` inline Lucide icons, no icon package needed.

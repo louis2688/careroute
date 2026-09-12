@@ -153,6 +153,27 @@ export async function updateBooking(
 
 export const listDrivers = (): Promise<Driver[]> => read("drivers?select=*&order=name.asc");
 
+export const findDriversByPin = (pin: string): Promise<Driver[]> =>
+  read(`drivers?select=*&pin=eq.${encodeURIComponent(pin)}&active=is.true`);
+
+export const getDriver = async (id: string): Promise<Driver | null> =>
+  (await read(`drivers?select=*&id=eq.${encodeURIComponent(id)}&limit=1`))[0] ?? null;
+
+export const getBookingById = async (id: string): Promise<BookingRow | null> =>
+  (await read(`bookings?select=*&id=eq.${encodeURIComponent(id)}&limit=1`))[0] ?? null;
+
+// A driver's open rides, soonest first.
+export const listDriverRides = (driverId: string): Promise<BookingRow[]> =>
+  read(
+    `bookings?select=*&driver_id=eq.${encodeURIComponent(driverId)}&status=not.in.(completed,cancelled)&order=date.asc,time.asc`,
+  );
+
+// Everything a biller needs, with the status history and driver, oldest first.
+export function listForExport(from: string, to: string): Promise<TripRow[]> {
+  const range = (from ? `&date=gte.${from}` : "") + (to ? `&date=lte.${to}` : "");
+  return read(`bookings?select=*,${DRIVER},booking_events(status,at,lat,lon)&order=date.asc,time.asc${range}`);
+}
+
 export type DriverInput = Omit<Driver, "id" | "created_at">;
 
 export async function insertDriver(d: DriverInput) {
