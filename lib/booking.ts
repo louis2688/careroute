@@ -145,3 +145,87 @@ export function validateBooking(form: FormData): Result {
     },
   };
 }
+
+// ---- AI intake: free text -> form fields ----
+
+export type Intake = {
+  name: string;
+  phone: string;
+  email: string;
+  pickup: string;
+  dropoff: string;
+  date: string;
+  time: string;
+  returnTime: string;
+  tripType: Booking["tripType"] | "";
+  mobility: Booking["mobility"] | "";
+  companions: number;
+  purpose: string;
+  notes: string;
+  days: number[];
+  until: string;
+};
+
+const str = (description: string) => ({ type: "string", description });
+
+// JSON schema the model must follow. Every field is required; unknown values are empty strings.
+export const INTAKE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "name", "phone", "email", "pickup", "dropoff", "date", "time", "returnTime",
+    "tripType", "mobility", "companions", "purpose", "notes", "days", "until",
+  ],
+  properties: {
+    name: str("Passenger's full name"),
+    phone: str("Phone number exactly as written, or empty"),
+    email: str("Email address exactly as written, or empty"),
+    pickup: str("Pickup street address, or empty"),
+    dropoff: str("Destination name and address, or empty"),
+    date: str("First ride date as YYYY-MM-DD, or empty"),
+    time: str("Pickup time as 24-hour HH:MM, or empty"),
+    returnTime: str("Return pickup time as 24-hour HH:MM for round trips, or empty"),
+    tripType: { type: "string", enum: [...TRIP_TYPES, ""], description: "round-trip when a ride back is needed" },
+    mobility: { type: "string", enum: [...MOBILITY, ""], description: "wheelchair, stretcher (must lie down), or ambulatory (can walk)" },
+    companions: { type: "integer", minimum: 0, maximum: 3, description: "People riding along, 0 to 3" },
+    purpose: { type: "string", enum: [...PURPOSES, ""], description: "Reason for the trip" },
+    notes: str("Anything the driver should know: oxygen, stairs, language, equipment"),
+    days: { type: "array", items: { type: "integer", minimum: 0, maximum: 6 }, description: "Weekdays for a recurring ride, 0 = Sunday. Empty for a single ride" },
+    until: str("Last date of a recurring ride as YYYY-MM-DD, or empty"),
+  },
+} as const;
+
+// Model output is untrusted. Keep only values the form can hold.
+export function sanitizeIntake(raw: unknown): Partial<Intake> {
+  const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const text = (k: string, max = 200) => (typeof r[k] === "string" ? r[k].trim().slice(0, max) : "");
+  const date = (k: string) => (/^\d{4}-\d{2}-\d{2}$/.test(text(k)) ? text(k) : "");
+  const time = (k: string) => (/^([01]\d|2[0-3]):[0-5]\d$/.test(text(k)) ? text(k) : "");
+  const out: Partial<Intake> = {};
+  const put = <K extends keyof Intake>(k: K, v: Intake[K]) => {
+    if (v !== "" && !(Array.isArray(v) && v.length === 0)) out[k] = v;
+  };
+  put("name", text("name"));
+  put("phone", text("phone", 40));
+  put("email", /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text("email")) ? text("email") : "");
+  put("pickup", text("pickup"));
+  put("dropoff", text("dropoff"));
+  put("date", date("date"));
+  put("time", time("time"));
+  put("returnTime", time("returnTime"));
+  const tripType = text("tripType");
+  if (oneOf(TRIP_TYPES, tripType)) put("tripType", tripType);
+  const mobility = text("mobility");
+  if (oneOf(MOBILITY, mobility)) put("mobility", mobility);
+  const companions = Number(r.companions);
+  if (Number.isInteger(companions) && companions >= 1 && companions <= 3) put("companions", companions);
+  const purpose = text("purpose");
+  if (oneOf(PURPOSES, purpose)) put("purpose", purpose);
+  put("notes", text("notes", 2000));
+  const days = Array.isArray(r.days)
+    ? [...new Set(r.days.map(Number))].filter((n) => Number.isInteger(n) && n >= 0 && n <= 6)
+    : [];
+  put("days", days);
+  put("until", date("until"));
+  return out;
+}

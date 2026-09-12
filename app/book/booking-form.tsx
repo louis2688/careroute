@@ -11,10 +11,11 @@ import {
 } from "react";
 import { preconnect } from "react-dom";
 import { Icon } from "@/components/icons";
-import { MAX_SERIES, MOBILITY, PURPOSES, TRIP_TYPES, WEEKDAYS, oneOf } from "@/lib/booking";
+import { MAX_SERIES, MOBILITY, PURPOSES, TRIP_TYPES, WEEKDAYS, oneOf, type Intake } from "@/lib/booking";
 import { drivingRoute, searchPlaces, type Place } from "@/lib/geo";
 import { estimateFare, kmToMiles, money } from "@/lib/pricing";
 import { submitBooking } from "./actions";
+import { parseRideRequest } from "./intake";
 
 type Quote = { km: number; minutes: number; cents: number };
 
@@ -85,6 +86,9 @@ export function BookingForm({
   const [options, setOptions] = useState<Record<AddressKey, Place[]>>({ pickup: [], dropoff: [] });
   const [picked, setPicked] = useState<Partial<Record<AddressKey, Place>>>({});
   const [quote, setQuote] = useState<Quote | null | "loading">(null);
+  const [draft, setDraft] = useState("");
+  const [intake, setIntake] = useState<{ busy: boolean; message: string }>({ busy: false, message: "" });
+  const formRef = useRef<HTMLFormElement>(null);
   const places = useRef(new Map<string, Place>()); // every suggestion seen, by label
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const quoteSeq = useRef(0);
@@ -107,6 +111,80 @@ export function BookingForm({
     const route = await drivingRoute(from, to);
     if (seq !== quoteSeq.current) return; // a newer request is in flight
     setQuote(route && { ...route, cents: estimateFare(route.km, mobility, tripType) });
+  }
+
+  // Writes the assistant's fields into the uncontrolled form, then geocodes the addresses it found.
+  async function applyIntake(fields: Partial<Intake>) {
+    const form = formRef.current;
+    if (!form) return;
+    const field = (name: string) => form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | null;
+    const check = (name: string, value: string | number) => {
+      const r = form.querySelector<HTMLInputElement>(`input[name="${name}"][value="${value}"]`);
+      if (r) r.checked = true;
+    };
+    let filled = 0;
+    for (const key of ["name", "phone", "email", "date", "time", "returnTime", "notes", "until"] as const) {
+      const v = fields[key];
+      const el = field(key);
+      if (v && el) {
+        el.value = v;
+        filled++;
+      }
+    }
+    for (const key of ["purpose", "companions"] as const) {
+      const v = fields[key];
+      const el = field(key);
+      if (v != null && el) {
+        el.value = String(v);
+        filled++;
+      }
+    }
+    if (fields.tripType) {
+      check("tripType", fields.tripType);
+      filled++;
+    }
+    if (fields.mobility) {
+      check("mobility", fields.mobility);
+      filled++;
+    }
+    if (fields.days?.length) {
+      const details = form.querySelector("details");
+      if (details) details.open = true;
+      for (const d of fields.days) check("days", d);
+      filled++;
+    }
+    for (const key of ["pickup", "dropoff"] as const) {
+      const q = fields[key];
+      const el = field(key);
+      if (!q || !el) continue;
+      filled++;
+      const found = await searchPlaces(q);
+      const top = found[0];
+      if (top) {
+        for (const p of found) places.current.set(p.label, p);
+        setOptions((o) => ({ ...o, [key]: found }));
+        setPicked((p) => ({ ...p, [key]: top }));
+        el.value = top.label;
+      } else {
+        el.value = q;
+      }
+    }
+    await requestQuote(form);
+    return filled;
+  }
+
+  async function runIntake() {
+    setIntake({ busy: true, message: "Reading your request…" });
+    const result = await parseRideRequest(draft).catch(() => null);
+    if (!result) return setIntake({ busy: false, message: "The assistant is unavailable right now. Please fill in the form by hand." });
+    if (!result.ok) return setIntake({ busy: false, message: result.error });
+    const filled = (await applyIntake(result.fields)) ?? 0;
+    setIntake({
+      busy: false,
+      message: filled
+        ? `Filled ${filled} field${filled === 1 ? "" : "s"} below. Check them, add what is missing, then send.`
+        : "Nothing usable found. Please fill in the form by hand.",
+    });
   }
 
   // One handler for the whole form: address typing fetches suggestions, anything else refreshes the quote.
@@ -172,7 +250,32 @@ export function BookingForm({
   }
 
   return (
-    <form action={action} onChange={onFormChange} className="space-y-10">
+    <form ref={formRef} action={action} onChange={onFormChange} className="space-y-10">
+      <section className="rounded-xl border border-sky-200 bg-sky-50 p-4 sm:p-5">
+        <label className="block">
+          <span className="font-heading font-semibold text-slate-900">Describe the ride and we fill in the form</span>
+          <span className="mt-1 block text-sm text-slate-600">
+            For example: &ldquo;My mother Rosa needs a wheelchair van from 45 Oak Street to City Dialysis Center,
+            400 Main St, every Monday, Wednesday and Friday at 7am until December. Call 555-010-7788.&rdquo;
+          </span>
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={3}
+            maxLength={2000}
+            className={input}
+          />
+        </label>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button type="button" onClick={runIntake} disabled={intake.busy || draft.trim().length < 10} className="btn-secondary">
+            {intake.busy ? "Reading…" : "Fill in the form"}
+          </button>
+          <p aria-live="polite" className="text-sm text-slate-700">
+            {intake.message}
+          </p>
+        </div>
+      </section>
+
       {state && !state.ok && (
         <p
           role="alert"

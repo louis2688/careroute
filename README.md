@@ -7,7 +7,7 @@ Website for a non-emergency medical transportation. Built with Next.js 16, React
 - `/` company overview: description, mission, vision, services summary, how booking works
 - `/services` the eight NEMT services with what each includes
 - `/terms` terms and conditions of service
-- `/book` ride request form with address suggestions, a live fare estimate, and standing orders (repeat on chosen weekdays until a date, up to 30 rides). Validated on the server, saved to Postgres, returns a reference number
+- `/book` ride request form with address suggestions, a live fare estimate, an assistant that fills the form from a plain-language description (Claude, structured output), and standing orders (repeat on chosen weekdays until a date, up to 30 rides). Validated on the server, saved to Postgres, returns a reference number
 - `/trip/CR-XXXXXXXX` passenger tracking page: request received, confirmed, driver on the way, completed. Refreshes itself.
 - `/admin` dispatch board: every request, day view, driver assignment, status buttons, CSV export. Password protected.
 - `/admin/fleet` drivers and vehicles with credential expiry badges (license, CPR, background check, inspection, insurance).
@@ -34,6 +34,7 @@ Open http://localhost:3000.
 | `SUPABASE_SECRET_KEY` | Same page, create a secret key (`sb_secret_...`). Server only, never shipped to the browser. Legacy `service_role` keys also work. |
 | `ADMIN_PASSWORD` | Anything you like. The browser asks for it on `/admin` (any username). |
 | `AUTH_SECRET` | Signs driver, facility, and passenger session cookies. Optional, falls back to `ADMIN_PASSWORD`. |
+| `ANTHROPIC_API_KEY` | console.anthropic.com. Powers "Describe the ride and we fill in the form". Optional; the button explains when it is missing. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google Cloud Console > Credentials > OAuth client ID (Web application). Add `http://localhost:3000/auth/google/callback` and your production URL + `/auth/google/callback` as authorized redirect URIs. Optional. |
 | `RESEND_API_KEY`, `EMAIL_FROM` | resend.com. Optional. Without a verified domain, Resend only delivers to the account owner's address. |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | twilio.com. Optional. A trial account texts verified numbers only. |
@@ -68,5 +69,6 @@ Seeded drivers (phone, PIN): Marco Alvarez 555-010-3001 / 1234, Denise Okafor 55
 - `lib/notify.ts` email and SMS. `lib/phone.ts` turns typed numbers into E.164.
 - `lib/auth.ts` and `proxy.ts` the shared-password gate on `/admin`. `lib/token.ts` and `lib/session.ts` the signed cookie for drivers, facilities, and passengers.
 - `app/auth/google/` the Google OAuth code flow in two route handlers, no auth library.
+- `app/book/intake.ts` the Claude call that turns free text into form fields. `INTAKE_SCHEMA` and `sanitizeIntake` in `lib/booking.ts` define and police the shape.
 - `components/signature-pad.tsx` and `components/geo-fields.tsx` proof of service inputs.
 - `components/icons.tsx` inline Lucide icons, no icon package needed.
