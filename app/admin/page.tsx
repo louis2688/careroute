@@ -1,10 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { NEXT_STEP, STATUS_LABEL, listBookings, type BookingRow, type Status } from "@/lib/db";
+import { AutoSubmitSelect } from "@/components/auto-submit-select";
+import {
+  NEXT_STEP,
+  STATUS_LABEL,
+  listBookings,
+  listDrivers,
+  type BookingRow,
+  type Driver,
+  type Status,
+} from "@/lib/db";
 import { channels } from "@/lib/notify";
 import { kmToMiles, money } from "@/lib/pricing";
 import { site } from "@/lib/site";
-import { setStatus } from "./actions";
+import { assignDriver, setStatus } from "./actions";
 
 export const metadata: Metadata = { title: "Dispatch", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -13,6 +22,7 @@ const badge: Record<Status, string> = {
   new: "bg-amber-100 text-amber-900",
   confirmed: "bg-emerald-100 text-emerald-900",
   en_route: "bg-sky-100 text-sky-900",
+  picked_up: "bg-violet-100 text-violet-900",
   completed: "bg-slate-800 text-white",
   cancelled: "bg-slate-200 text-slate-700",
 };
@@ -26,27 +36,54 @@ const when = (iso: string) =>
     minute: "2-digit",
   });
 
-export default async function AdminPage() {
+const select =
+  "rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus:border-sky-700";
+
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string }>;
+}) {
+  const raw = (await searchParams).date ?? "";
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : "";
+
   let rows: BookingRow[] = [];
+  let drivers: Driver[] = [];
   let error = "";
   try {
-    rows = await listBookings();
+    [rows, drivers] = await Promise.all([listBookings({ date }), listDrivers()]);
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
+  const active = drivers.filter((d) => d.active);
   const open = rows.filter((r) => r.status === "new").length;
+  const unassigned = rows.filter((r) => !r.driver_id && !["completed", "cancelled"].includes(r.status)).length;
   const ch = channels();
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="pb-10">
+      <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold tracking-wide text-sky-700 uppercase">Dispatch</p>
-          <h1 className="mt-1 font-heading text-3xl font-bold tracking-tight text-slate-900">Ride requests</h1>
+          <h1 className="font-heading text-3xl font-bold tracking-tight text-slate-900">
+            {date ? `Schedule for ${date}` : "Ride requests"}
+          </h1>
+          <p className="mt-1 text-sm text-slate-600">
+            {rows.length} rides, <span className="font-semibold text-slate-900">{open} waiting for confirmation</span>,{" "}
+            {unassigned} without a driver
+          </p>
         </div>
-        <p className="text-sm text-slate-600">
-          {rows.length} total, <span className="font-semibold text-slate-900">{open} waiting for confirmation</span>
-        </p>
+        <form method="get" className="flex flex-wrap items-end gap-2">
+          <label className="text-sm font-medium text-slate-800">
+            Day
+            <input type="date" name="date" defaultValue={date} className={`${select} mt-1 block`} />
+          </label>
+          <button className="btn-secondary min-h-9 px-3 py-1.5 text-sm">Show</button>
+          {date && (
+            <Link href="/admin" className="btn-secondary min-h-9 px-3 py-1.5 text-sm">
+              Newest first
+            </Link>
+          )}
+        </form>
       </div>
 
       <p className="mt-4 text-sm text-slate-600">
@@ -60,11 +97,11 @@ export default async function AdminPage() {
         </p>
       ) : rows.length === 0 ? (
         <p className="mt-8 rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-600">
-          No ride requests yet. New submissions from the booking form show up here.
+          {date ? `No rides on ${date}.` : "No ride requests yet. New submissions from the booking form show up here."}
         </p>
       ) : (
         <div className="mt-8 overflow-x-auto rounded-xl border border-slate-200 bg-white">
-          <table className="w-full min-w-[68rem] text-left text-sm">
+          <table className="w-full min-w-[80rem] text-left text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-xs tracking-wide text-slate-600 uppercase">
               <tr>
                 <th className="px-4 py-3 font-semibold">Ref</th>
@@ -72,6 +109,7 @@ export default async function AdminPage() {
                 <th className="px-4 py-3 font-semibold">Trip</th>
                 <th className="px-4 py-3 font-semibold">When</th>
                 <th className="px-4 py-3 font-semibold">Needs</th>
+                <th className="px-4 py-3 font-semibold">Driver</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
                 <th className="px-4 py-3 font-semibold">
                   <span className="sr-only">Actions</span>
@@ -82,6 +120,10 @@ export default async function AdminPage() {
               {rows.map((r) => {
                 const next = NEXT_STEP[r.status];
                 const closed = r.status === "completed" || r.status === "cancelled";
+                // Drivers whose vehicle matches the passenger's needs come first.
+                const options = [...active].sort(
+                  (a, b) => Number(b.vehicle_type === r.mobility) - Number(a.vehicle_type === r.mobility),
+                );
                 return (
                   <tr key={r.id}>
                     <td className="px-4 py-3 whitespace-nowrap">
@@ -123,6 +165,28 @@ export default async function AdminPage() {
                         <p className="text-slate-600">
                           {r.companions} companion{r.companions > 1 ? "s" : ""}
                         </p>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {closed ? (
+                        <p className="text-slate-700">{r.driver?.name ?? "Unassigned"}</p>
+                      ) : (
+                        <form action={assignDriver}>
+                          <input type="hidden" name="id" value={r.id} />
+                          <AutoSubmitSelect
+                            name="driver_id"
+                            defaultValue={r.driver_id ?? ""}
+                            aria-label={`Driver for ${r.ref}`}
+                            className={select}
+                          >
+                            <option value="">Unassigned</option>
+                            {options.map((d) => (
+                              <option key={d.id} value={d.id}>
+                                {d.name} ({d.vehicle_type})
+                              </option>
+                            ))}
+                          </AutoSubmitSelect>
+                        </form>
                       )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">

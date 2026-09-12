@@ -1,22 +1,40 @@
 import type { Booking } from "@/lib/booking";
 import type { Route } from "@/lib/geo";
 
-export const STATUSES = ["new", "confirmed", "en_route", "completed", "cancelled"] as const;
+export const STATUSES = ["new", "confirmed", "en_route", "picked_up", "completed", "cancelled"] as const;
 export type Status = (typeof STATUSES)[number];
 
 export const STATUS_LABEL: Record<Status, string> = {
   new: "Request received",
   confirmed: "Confirmed by dispatch",
   en_route: "Driver on the way",
+  picked_up: "Passenger on board",
   completed: "Ride completed",
   cancelled: "Cancelled",
 };
 
-// What dispatch can do next from each status.
+// What happens next from each status.
 export const NEXT_STEP: Partial<Record<Status, { status: Status; label: string }>> = {
   new: { status: "confirmed", label: "Confirm" },
   confirmed: { status: "en_route", label: "Driver en route" },
-  en_route: { status: "completed", label: "Complete" },
+  en_route: { status: "picked_up", label: "Picked up" },
+  picked_up: { status: "completed", label: "Complete" },
+};
+
+export type Driver = {
+  id: string;
+  name: string;
+  phone: string;
+  pin: string;
+  vehicle_type: Booking["mobility"];
+  plate: string;
+  license_expires: string | null;
+  cpr_expires: string | null;
+  background_expires: string | null;
+  inspection_expires: string | null;
+  insurance_expires: string | null;
+  active: boolean;
+  created_at: string;
 };
 
 export type BookingRow = {
@@ -40,9 +58,19 @@ export type BookingRow = {
   distance_km: number | null;
   duration_min: number | null;
   quote_cents: number | null;
+  driver_id: string | null;
+  last_lat: number | null;
+  last_lon: number | null;
+  signature: string | null;
+  driver?: Pick<Driver, "name" | "phone" | "vehicle_type" | "plate"> | null;
 };
 
-export type TripRow = BookingRow & { booking_events: { status: Status; at: string }[] };
+export type TripRow = BookingRow & {
+  booking_events: { status: Status; at: string; lat: number | null; lon: number | null }[];
+};
+
+export const isUuid = (v: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 
 // ponytail: PostgREST over fetch, no SDK. Swap for @supabase/supabase-js if queries grow.
 // The secret key bypasses RLS, so this module must only run on the server.
@@ -66,6 +94,10 @@ function api(path: string, init: RequestInit = {}) {
     return r;
   });
 }
+
+const read = (path: string) => api(path, { headers: { Prefer: "" } }).then((r) => r.json());
+
+const DRIVER = "driver:drivers(name,phone,vehicle_type,plate)";
 
 export async function insertBooking(ref: string, b: Booking, quote: (Route & { cents: number }) | null) {
   await api("bookings", {
@@ -92,28 +124,41 @@ export async function insertBooking(ref: string, b: Booking, quote: (Route & { c
   });
 }
 
-export async function listBookings(): Promise<BookingRow[]> {
-  const r = await api("bookings?select=*&order=created_at.desc&limit=200", {
-    headers: { Prefer: "" },
-  });
-  return r.json();
+// Newest first by default. With a date, that day's schedule in pickup order.
+export function listBookings(filter: { date?: string } = {}): Promise<BookingRow[]> {
+  const where = filter.date ? `&date=eq.${filter.date}` : "";
+  const order = filter.date ? "time.asc" : "created_at.desc";
+  return read(`bookings?select=*,${DRIVER}&order=${order}&limit=200${where}`);
 }
 
 export async function getBooking(ref: string): Promise<TripRow | null> {
-  const r = await api(
-    `bookings?ref=eq.${encodeURIComponent(ref)}&select=*,booking_events(status,at)&limit=1`,
-    { headers: { Prefer: "" } },
+  const rows: TripRow[] = await read(
+    `bookings?ref=eq.${encodeURIComponent(ref)}&select=*,${DRIVER},booking_events(status,at,lat,lon)&limit=1`,
   );
-  const rows: TripRow[] = await r.json();
   return rows[0] ?? null;
 }
 
-export async function updateStatus(id: string, status: Status): Promise<BookingRow | null> {
+export async function updateBooking(
+  id: string,
+  patch: Partial<Pick<BookingRow, "status" | "driver_id" | "last_lat" | "last_lon" | "signature">>,
+): Promise<BookingRow | null> {
   const r = await api(`bookings?id=eq.${encodeURIComponent(id)}&select=*`, {
     method: "PATCH",
     headers: { Prefer: "return=representation" },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify(patch),
   });
   const rows: BookingRow[] = await r.json();
   return rows[0] ?? null;
+}
+
+export const listDrivers = (): Promise<Driver[]> => read("drivers?select=*&order=name.asc");
+
+export type DriverInput = Omit<Driver, "id" | "created_at">;
+
+export async function insertDriver(d: DriverInput) {
+  await api("drivers", { method: "POST", body: JSON.stringify(d) });
+}
+
+export async function updateDriver(id: string, patch: Partial<DriverInput>) {
+  await api(`drivers?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(patch) });
 }

@@ -24,11 +24,12 @@ function message(b: Recipient, status: Status, base: string) {
     new: `Hi ${first}, ${site.name} received your ride request ${b.ref} for ${when}. Dispatch will confirm within one business hour. ${track}`,
     confirmed: `Hi ${first}, your ${site.name} ride ${b.ref} is confirmed for ${when}. Your driver will arrive 10 to 15 minutes early. ${track}`,
     en_route: `Hi ${first}, your ${site.name} driver is on the way for ride ${b.ref}. Please be ready at the pickup point. ${track}`,
+    picked_up: `Hi ${first}, you are on board for ride ${b.ref}. ${track}`,
     completed: `Hi ${first}, ride ${b.ref} is complete. Thank you for riding with ${site.name}.`,
     cancelled: `Hi ${first}, your ${site.name} ride ${b.ref} for ${when} was cancelled. Questions? Call ${site.phone}.`,
   }[status];
   const subject = `${site.name} ride ${b.ref}: ${
-    { new: "request received", confirmed: "confirmed", en_route: "driver on the way", completed: "completed", cancelled: "cancelled" }[status]
+    { new: "request received", confirmed: "confirmed", en_route: "driver on the way", picked_up: "on board", completed: "completed", cancelled: "cancelled" }[status]
   }`;
   return { subject, text };
 }

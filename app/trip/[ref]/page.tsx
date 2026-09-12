@@ -104,6 +104,14 @@ export default async function TripPage({ params }: { params: Promise<{ ref: stri
               {trip.companions > 0 && `, ${trip.companions} companion${trip.companions > 1 ? "s" : ""}`}
             </p>
           </div>
+          {trip.driver && (
+            <div>
+              <p className="font-semibold text-slate-900">Your driver</p>
+              <p className="text-slate-600">
+                {trip.driver.name}, {trip.driver.vehicle_type} vehicle {trip.driver.plate}
+              </p>
+            </div>
+          )}
           {trip.quote_cents != null && trip.distance_km != null && (
             <div>
               <p className="font-semibold text-slate-900">Estimated fare</p>
