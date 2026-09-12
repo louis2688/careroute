@@ -44,23 +44,23 @@ export function Menu({
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900"
+        className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
       >
         {label}
         <Icon name="chevron-down" className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 z-50 mt-1 w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
+        <div role="menu" className="absolute right-0 z-50 mt-1 w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg dark:border-slate-800 dark:bg-slate-900">
           {items.map(([href, title, description]) => (
             <Link
               key={href}
               href={href}
               role="menuitem"
               onClick={() => setOpen(false)}
-              className="block rounded-lg px-3 py-2 transition-colors hover:bg-slate-50"
+              className="block rounded-lg px-3 py-2 transition-colors hover:bg-slate-50 dark:hover:bg-slate-950"
             >
-              <span className="block text-sm font-medium text-slate-900">{title}</span>
-              {description && <span className="block text-xs text-slate-500">{description}</span>}
+              <span className="block text-sm font-medium text-slate-900 dark:text-slate-100">{title}</span>
+              {description && <span className="block text-xs text-slate-500 dark:text-slate-400">{description}</span>}
             </Link>
           ))}
           {children}

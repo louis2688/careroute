@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { href, langFromPath, switchPath, ui } from "@/lib/i18n";
 import { Icon } from "./icons";
 import { Menu } from "./menu";
+import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
 
 // Client so it can read the URL: "/es/..." switches every label to Spanish without making pages dynamic.
@@ -33,17 +34,17 @@ export function SiteHeader({ name, phone, phoneHref }: { name: string; phone: st
     <>
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:font-semibold focus:text-sky-700 focus:shadow-lg"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:font-semibold focus:text-sky-700 focus:shadow-lg dark:focus:bg-slate-900 dark:focus:text-sky-400"
       >
         {t.nav.skip}
       </a>
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-y-2 px-4 py-3 sm:px-6">
           <Link
             href={href(lang, "/")}
-            className="order-1 flex items-center gap-2.5 font-heading text-lg font-bold text-slate-900"
+            className="order-1 flex items-center gap-2.5 font-heading text-lg font-bold text-slate-900 dark:text-slate-100"
           >
-            <span className="grid size-9 place-items-center rounded-lg bg-slate-900 text-white">
+            <span className="grid size-9 place-items-center rounded-lg bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900">
               <Icon name="truck" className="size-5" />
             </span>
             {name}
@@ -59,7 +60,7 @@ export function SiteHeader({ name, phone, phoneHref }: { name: string; phone: st
                   key={base}
                   href={h}
                   aria-current={path === h ? "page" : undefined}
-                  className="rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 aria-[current=page]:bg-slate-100 aria-[current=page]:text-slate-900"
+                  className="rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 aria-[current=page]:bg-slate-100 aria-[current=page]:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:aria-[current=page]:bg-slate-800 dark:aria-[current=page]:text-slate-100"
                 >
                   {label}
                 </Link>
@@ -67,19 +68,20 @@ export function SiteHeader({ name, phone, phoneHref }: { name: string; phone: st
             })}
           </nav>
           <div className="order-2 flex items-center gap-1 sm:order-3 sm:gap-2">
+            <ThemeToggle labels={{ light: t.nav.lightMode, dark: t.nav.darkMode }} />
             <Link
               href={switchPath(path, other)}
               hrefLang={other}
               lang={other}
               aria-label={t.nav.switchLabel}
-              className="inline-flex min-h-11 items-center rounded-md px-2.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              className="inline-flex min-h-11 items-center rounded-md px-2.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
             >
               {t.nav.switchShort}
             </Link>
             <Menu label={t.nav.portals} items={portals} />
             <a
               href={phoneHref}
-              className="hidden items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 lg:flex"
+              className="hidden items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 lg:flex dark:text-slate-300 dark:hover:bg-slate-800"
             >
               <Icon name="phone" className="size-4" />
               {phone}

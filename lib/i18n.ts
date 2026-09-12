@@ -11,7 +11,7 @@ export const switchPath = (path: string, to: Lang) => {
 
 const en = {
   locale: "en-US",
-  nav: { home: "Home", services: "Services", terms: "Terms", book: "Book a ride", portals: "Portals", signIn: "Sign in", switchLabel: "Español", switchShort: "ES", skip: "Skip to content" },
+  nav: { home: "Home", services: "Services", terms: "Terms", book: "Book a ride", portals: "Portals", signIn: "Sign in", switchLabel: "Español", switchShort: "ES", skip: "Skip to content", lightMode: "Switch to light mode", darkMode: "Switch to dark mode" },
   portals: {
     dispatch: ["Dispatch", "Ride requests, drivers, exports"],
     driver: ["Driver app", "Today's rides, pickups, signatures"],
@@ -114,7 +114,7 @@ const en = {
 
 const es: typeof en = {
   locale: "es",
-  nav: { home: "Inicio", services: "Servicios", terms: "Condiciones", book: "Reservar un viaje", portals: "Portales", signIn: "Iniciar sesión", switchLabel: "English", switchShort: "EN", skip: "Saltar al contenido" },
+  nav: { home: "Inicio", services: "Servicios", terms: "Condiciones", book: "Reservar un viaje", portals: "Portales", signIn: "Iniciar sesión", switchLabel: "English", switchShort: "EN", skip: "Saltar al contenido", lightMode: "Cambiar a modo claro", darkMode: "Cambiar a modo oscuro" },
   portals: {
     dispatch: ["Despacho", "Solicitudes, conductores, exportaciones"],
     driver: ["App del conductor", "Viajes de hoy, recogidas, firmas"],
