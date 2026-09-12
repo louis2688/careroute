@@ -1,21 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AutoSubmitSelect } from "@/components/auto-submit-select";
-import {
-  NEXT_STEP,
-  STATUS_LABEL,
-  listBookings,
-  listDrivers,
-  type BookingRow,
-  type Driver,
-  type Status,
-} from "@/lib/db";
-import { channels } from "@/lib/notify";
-import { kmToMiles, money } from "@/lib/pricing";
-import { site } from "@/lib/site";
-import { assignDriver, setStatus } from "./actions";
+import { Icon } from "@/components/icons";
+import { STATUS_LABEL, listBookings, listDrivers, type BookingRow, type Driver, type Status } from "@/lib/db";
+import { CREDENTIALS, daysAgoISO, expiryTone, todayISO } from "@/lib/fleet";
+import { money } from "@/lib/pricing";
 
-export const metadata: Metadata = { title: "Dispatch", robots: { index: false } };
+export const metadata: Metadata = { title: "Dispatch dashboard", robots: { index: false } };
 export const dynamic = "force-dynamic";
 
 const badge: Record<Status, string> = {
@@ -27,212 +17,163 @@ const badge: Record<Status, string> = {
   cancelled: "bg-slate-200 text-slate-700",
 };
 
-const when = (iso: string) =>
-  new Date(iso).toLocaleString("en-US", {
-    timeZone: site.timeZone,
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+const card = "rounded-2xl border border-slate-200 bg-white p-5";
 
-const select =
-  "rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus:border-sky-700";
+function Stat({ label, value, hint, tone = "" }: { label: string; value: string | number; hint?: string; tone?: string }) {
+  return (
+    <div className={card}>
+      <p className="text-sm text-slate-600">{label}</p>
+      <p className={`mt-1 font-heading text-3xl font-bold tracking-tight ${tone || "text-slate-900"}`}>{value}</p>
+      {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
+    </div>
+  );
+}
 
-export default async function AdminPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ date?: string }>;
-}) {
-  const raw = (await searchParams).date ?? "";
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : "";
-
-  let rows: BookingRow[] = [];
+export default async function DashboardPage() {
+  const today = todayISO();
+  const weekAgo = daysAgoISO(7);
+  let open: BookingRow[] = [];
+  let recent: BookingRow[] = [];
   let drivers: Driver[] = [];
   let error = "";
   try {
-    [rows, drivers] = await Promise.all([listBookings({ date }), listDrivers()]);
+    [open, recent, drivers] = await Promise.all([
+      listBookings({ open: true }),
+      listBookings({ from: weekAgo }),
+      listDrivers(),
+    ]);
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
-  const active = drivers.filter((d) => d.active);
-  const open = rows.filter((r) => r.status === "new").length;
-  const unassigned = rows.filter((r) => !r.driver_id && !["completed", "cancelled"].includes(r.status)).length;
-  const ch = channels();
+
+  const todays = recent.filter((r) => r.date === today);
+  const waiting = open.filter((r) => r.status === "new");
+  const unassigned = open.filter((r) => !r.driver_id);
+  const week = recent.filter((r) => r.date <= today);
+  const completed = week.filter((r) => r.status === "completed");
+  const cancelled = week.filter((r) => r.status === "cancelled");
+  const revenue = completed.reduce((sum, r) => sum + (r.quote_cents ?? 0), 0);
+  const alerts = drivers
+    .filter((d) => d.active)
+    .flatMap((d) =>
+      CREDENTIALS.map(([key, label]) => ({ driver: d.name, label, date: d[key], tone: expiryTone(d[key], today) })),
+    )
+    .filter((a) => a.tone === "expired" || a.tone === "soon")
+    .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
 
   return (
     <div className="pb-10">
       <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-heading text-3xl font-bold tracking-tight text-slate-900">
-            {date ? `Schedule for ${date}` : "Ride requests"}
-          </h1>
-          <p className="mt-1 text-sm text-slate-600">
-            {rows.length} rides, <span className="font-semibold text-slate-900">{open} waiting for confirmation</span>,{" "}
-            {unassigned} without a driver
-          </p>
+          <h1 className="font-heading text-3xl font-bold tracking-tight text-slate-900">Dashboard</h1>
+          <p className="mt-1 text-sm text-slate-600">{today}. Numbers refresh on every load.</p>
         </div>
-        <div className="flex flex-wrap items-end gap-4">
-          <form method="get" className="flex flex-wrap items-end gap-2">
-            <label className="text-sm font-medium text-slate-800">
-              Day
-              <input type="date" name="date" defaultValue={date} className={`${select} mt-1 block`} />
-            </label>
-            <button className="btn-secondary min-h-9 px-3 py-1.5 text-sm">Show</button>
-            {date && (
-              <Link href="/admin" className="btn-secondary min-h-9 px-3 py-1.5 text-sm">
-                Newest first
-              </Link>
-            )}
-          </form>
-          <form method="get" action="/admin/export" className="flex flex-wrap items-end gap-2">
-            <label className="text-sm font-medium text-slate-800">
-              From
-              <input type="date" name="from" defaultValue={date} className={`${select} mt-1 block`} />
-            </label>
-            <label className="text-sm font-medium text-slate-800">
-              To
-              <input type="date" name="to" defaultValue={date} className={`${select} mt-1 block`} />
-            </label>
-            <button className="btn-secondary min-h-9 px-3 py-1.5 text-sm">Export CSV</button>
-          </form>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/book" className="btn-primary min-h-10 px-4 py-2 text-sm">
+            Book for a caller
+          </Link>
+          <a href={`/admin/export?from=${weekAgo}&to=${today}`} className="btn-secondary min-h-10 px-4 py-2 text-sm">
+            Export last 7 days
+          </a>
         </div>
       </div>
 
-      <p className="mt-4 text-sm text-slate-600">
-        Passenger notifications: email {ch.email ? "on" : "off"}, SMS {ch.sms ? "on" : "off"}.
-        {!(ch.email && ch.sms) && " Channels that are off print the message to the server log instead. Add the Resend and Twilio keys to switch them on."}
-      </p>
-
-      {error ? (
-        <p role="alert" className="mt-8 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          Could not load bookings. {error}
+      {error && (
+        <p role="alert" className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          Could not load data. {error}
         </p>
-      ) : rows.length === 0 ? (
-        <p className="mt-8 rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-600">
-          {date ? `No rides on ${date}.` : "No ride requests yet. New submissions from the booking form show up here."}
-        </p>
-      ) : (
-        <div className="mt-8 overflow-x-auto rounded-xl border border-slate-200 bg-white">
-          <table className="w-full min-w-[80rem] text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs tracking-wide text-slate-600 uppercase">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Ref</th>
-                <th className="px-4 py-3 font-semibold">Passenger</th>
-                <th className="px-4 py-3 font-semibold">Trip</th>
-                <th className="px-4 py-3 font-semibold">When</th>
-                <th className="px-4 py-3 font-semibold">Needs</th>
-                <th className="px-4 py-3 font-semibold">Driver</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 font-semibold">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 align-top">
-              {rows.map((r) => {
-                const next = NEXT_STEP[r.status];
-                const closed = r.status === "completed" || r.status === "cancelled";
-                // Drivers whose vehicle matches the passenger's needs come first.
-                const options = [...active].sort(
-                  (a, b) => Number(b.vehicle_type === r.mobility) - Number(a.vehicle_type === r.mobility),
-                );
-                return (
-                  <tr key={r.id}>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <Link href={`/trip/${r.ref}`} className="font-mono font-semibold text-sky-700 hover:underline">
-                        {r.ref}
-                      </Link>
-                      <p className="mt-0.5 text-xs text-slate-500">{when(r.created_at)}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-slate-900">{r.name}</p>
-                      <p className="text-slate-600">
-                        <a href={`tel:${r.phone}`} className="hover:underline">{r.phone}</a>
-                      </p>
-                      <p className="text-slate-600">
-                        <a href={`mailto:${r.email}`} className="hover:underline">{r.email}</a>
-                      </p>
-                    </td>
-                    <td className="max-w-xs px-4 py-3">
-                      <p className="text-slate-900">{r.pickup}</p>
-                      <p className="text-slate-500">to {r.dropoff}</p>
-                      {r.quote_cents != null && r.distance_km != null && (
-                        <p className="mt-1 text-slate-700">
-                          Est. {money(r.quote_cents)}, {kmToMiles(r.distance_km).toFixed(1)} mi
-                        </p>
-                      )}
-                      {r.notes && <p className="mt-1 text-xs text-slate-600">Note: {r.notes}</p>}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <p className="text-slate-900">{r.date}</p>
-                      <p className="text-slate-600">
-                        {r.time.slice(0, 5)} {r.trip_type === "round-trip" ? "round trip" : "one-way"}
-                      </p>
-                      {r.return_time && <p className="text-slate-600">return {r.return_time.slice(0, 5)}</p>}
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-slate-900 capitalize">{r.mobility}</p>
-                      <p className="text-slate-600">{r.purpose}</p>
-                      {r.companions > 0 && (
-                        <p className="text-slate-600">
-                          {r.companions} companion{r.companions > 1 ? "s" : ""}
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {closed ? (
-                        <p className="text-slate-700">{r.driver?.name ?? "Unassigned"}</p>
-                      ) : (
-                        <form action={assignDriver}>
-                          <input type="hidden" name="id" value={r.id} />
-                          <AutoSubmitSelect
-                            name="driver_id"
-                            defaultValue={r.driver_id ?? ""}
-                            aria-label={`Driver for ${r.ref}`}
-                            className={select}
-                          >
-                            <option value="">Unassigned</option>
-                            {options.map((d) => (
-                              <option key={d.id} value={d.id}>
-                                {d.name} ({d.vehicle_type})
-                              </option>
-                            ))}
-                          </AutoSubmitSelect>
-                        </form>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge[r.status]}`}>
-                        {STATUS_LABEL[r.status]}
-                      </span>
-                      {r.signature && (
-                        // eslint-disable-next-line @next/next/no-img-element -- data URL drawn by the passenger
-                        <img src={r.signature} alt="Passenger signature" className="mt-2 h-10 rounded border border-slate-200 bg-white" />
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {!closed && (
-                        <form action={setStatus} className="flex gap-2">
-                          <input type="hidden" name="id" value={r.id} />
-                          {next && (
-                            <button name="status" value={next.status} className="btn-primary min-h-9 px-3 py-1.5 text-xs whitespace-nowrap">
-                              {next.label}
-                            </button>
-                          )}
-                          <button name="status" value="cancelled" className="btn-secondary min-h-9 px-3 py-1.5 text-xs">
-                            Cancel
-                          </button>
-                        </form>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
       )}
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat label="Rides today" value={todays.length} hint={`${todays.filter((r) => r.status === "completed").length} completed so far`} />
+        <Stat label="Waiting for confirmation" value={waiting.length} tone={waiting.length ? "text-amber-700" : ""} hint="Passengers expect a reply within one business hour" />
+        <Stat label="Open rides without a driver" value={unassigned.length} tone={unassigned.length ? "text-red-700" : ""} />
+        <Stat label="Completed, last 7 days" value={completed.length} hint={`${money(revenue)} in estimated fares, ${cancelled.length} cancelled`} />
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <section className={card}>
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="font-heading text-lg font-semibold text-slate-900">Today&apos;s schedule</h2>
+            <Link href={`/admin/rides?date=${today}`} className="text-sm font-medium text-sky-700 hover:underline">
+              Open the day view
+            </Link>
+          </div>
+          {todays.length === 0 ? (
+            <p className="mt-4 text-sm text-slate-600">No rides scheduled for today.</p>
+          ) : (
+            <ul className="mt-4 divide-y divide-slate-100">
+              {todays.map((r) => (
+                <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2.5 text-sm">
+                  <span className="w-12 font-mono font-semibold text-slate-900">{r.time.slice(0, 5)}</span>
+                  <span className="min-w-40 flex-1">
+                    <span className="font-medium text-slate-900">{r.name}</span>
+                    <span className="text-slate-500"> · {r.mobility}</span>
+                  </span>
+                  <span className="text-slate-600">{r.driver?.name ?? "Unassigned"}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badge[r.status]}`}>{STATUS_LABEL[r.status]}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <div className="space-y-6">
+          <section className={card}>
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="font-heading text-lg font-semibold text-slate-900">Needs a reply</h2>
+              <Link href="/admin/rides" className="text-sm font-medium text-sky-700 hover:underline">
+                All requests
+              </Link>
+            </div>
+            {waiting.length === 0 ? (
+              <p className="mt-4 text-sm text-slate-600">Every request has been answered.</p>
+            ) : (
+              <ul className="mt-4 space-y-2 text-sm">
+                {waiting.slice(0, 5).map((r) => (
+                  <li key={r.id} className="flex items-center gap-3">
+                    <Icon name="clock" className="size-4 shrink-0 text-amber-600" />
+                    <span className="flex-1">
+                      <span className="font-medium text-slate-900">{r.name}</span>
+                      <span className="text-slate-500"> · {r.date} {r.time.slice(0, 5)}</span>
+                    </span>
+                    <Link href={`/trip/${r.ref}`} className="font-mono text-xs text-sky-700 hover:underline">
+                      {r.ref}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className={card}>
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="font-heading text-lg font-semibold text-slate-900">Credential alerts</h2>
+              <Link href="/admin/fleet" className="text-sm font-medium text-sky-700 hover:underline">
+                Fleet
+              </Link>
+            </div>
+            {alerts.length === 0 ? (
+              <p className="mt-4 text-sm text-slate-600">All driver and vehicle credentials are current.</p>
+            ) : (
+              <ul className="mt-4 space-y-2 text-sm">
+                {alerts.map((a) => (
+                  <li key={`${a.driver}-${a.label}`} className="flex items-center gap-3">
+                    <Icon name="alert-circle" className={`size-4 shrink-0 ${a.tone === "expired" ? "text-red-600" : "text-amber-600"}`} />
+                    <span className="flex-1">
+                      <span className="font-medium text-slate-900">{a.driver}</span>
+                      <span className="text-slate-500"> · {a.label}</span>
+                    </span>
+                    <span className={a.tone === "expired" ? "font-semibold text-red-700" : "text-amber-800"}>
+                      {a.tone === "expired" ? "expired" : "due"} {a.date}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      </div>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Figtree, Noto_Sans } from "next/font/google";
 import Link from "next/link";
 import { Icon } from "@/components/icons";
+import { Menu } from "@/components/menu";
 import { NavLinks } from "@/components/nav-links";
 import { site } from "@/lib/site";
 import "./globals.css";
@@ -17,11 +18,20 @@ export const metadata: Metadata = {
   description: site.description,
 };
 
+const portals = [
+  ["/admin", "Dispatch", "Ride requests, drivers, exports"],
+  ["/driver", "Driver app", "Today's rides, pickups, signatures"],
+  ["/facility", "Facility portal", "Book and track rides for your patients"],
+] as const;
+
 const footerLinks = [
   ["/", "Home"],
   ["/services", "Services"],
   ["/terms", "Terms & Conditions"],
   ["/book", "Book a ride"],
+  ["/admin", "Dispatch"],
+  ["/driver", "Driver app"],
+  ["/facility", "Facility portal"],
 ] as const;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -52,10 +62,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             >
               <NavLinks />
             </nav>
-            <div className="order-2 flex items-center gap-2 sm:order-3">
+            <div className="order-2 flex items-center gap-1 sm:order-3 sm:gap-2">
+              <Menu label="Portals" items={portals} />
               <a
                 href={site.phoneHref}
-                className="hidden items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 md:flex"
+                className="hidden items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 lg:flex"
               >
                 <Icon name="phone" className="size-4" />
                 {site.phone}

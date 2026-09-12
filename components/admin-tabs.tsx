@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const tabs = [
-  ["/admin", "Ride requests"],
+  ["/admin", "Dashboard"],
+  ["/admin/rides", "Ride requests"],
   ["/admin/fleet", "Drivers & fleet"],
 ] as const;
 

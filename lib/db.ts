@@ -124,10 +124,17 @@ export async function insertBooking(ref: string, b: Booking, quote: (Route & { c
   });
 }
 
-// Newest first by default. With a date, that day's schedule in pickup order.
-export function listBookings(filter: { date?: string } = {}): Promise<BookingRow[]> {
-  const where = filter.date ? `&date=eq.${filter.date}` : "";
-  const order = filter.date ? "time.asc" : "created_at.desc";
+// Newest first by default. Filtered by day or range, the schedule in pickup order.
+export function listBookings(filter: { date?: string; from?: string; open?: boolean } = {}): Promise<BookingRow[]> {
+  const where = [
+    filter.date && `date=eq.${filter.date}`,
+    filter.from && `date=gte.${filter.from}`,
+    filter.open && "status=in.(new,confirmed,en_route,picked_up)",
+  ]
+    .filter(Boolean)
+    .map((w) => `&${w}`)
+    .join("");
+  const order = filter.date || filter.from ? "date.asc,time.asc" : "created_at.desc";
   return read(`bookings?select=*,${DRIVER}&order=${order}&limit=200${where}`);
 }
 

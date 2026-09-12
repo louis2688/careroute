@@ -10,6 +10,7 @@ export type CredentialKey = (typeof CREDENTIALS)[number][0];
 export type Tone = "expired" | "soon" | "ok" | "missing";
 
 export const todayISO = () => new Date().toISOString().slice(0, 10);
+export const daysAgoISO = (days: number) => new Date(Date.now() - days * 864e5).toISOString().slice(0, 10);
 
 // Expired, expiring within 30 days, fine, or never recorded.
 export function expiryTone(date: string | null, today = todayISO()): Tone {

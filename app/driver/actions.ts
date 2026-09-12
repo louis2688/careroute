@@ -54,6 +54,7 @@ export async function driverUpdate(form: FormData) {
     ...(signed ? { signature } : {}),
   });
   revalidatePath("/driver");
+  revalidatePath("/admin", "layout");
   if (!row) return;
   const base = await siteUrl();
   after(() => notify(row, status, base));

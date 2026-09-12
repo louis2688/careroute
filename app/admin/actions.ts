@@ -14,7 +14,7 @@ export async function setStatus(form: FormData) {
   const status = str(form, "status");
   if (!isUuid(id) || !oneOf(STATUSES, status)) return;
   const row = await updateBooking(id, { status });
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   if (!row) return;
   const base = await siteUrl();
   after(() => notify(row, status, base));
@@ -25,7 +25,7 @@ export async function assignDriver(form: FormData) {
   const driver = str(form, "driver_id");
   if (!isUuid(id) || (driver && !isUuid(driver))) return;
   await updateBooking(id, { driver_id: driver || null });
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
 }
 
 export async function saveDriver(form: FormData) {
@@ -51,5 +51,5 @@ export async function saveDriver(form: FormData) {
   const patch = { ...d, ...dates, vehicle_type, ...(pin ? { pin } : {}) };
   if (id) await updateDriver(id, patch);
   else await insertDriver({ ...patch, pin });
-  revalidatePath("/admin/fleet");
+  revalidatePath("/admin", "layout");
 }
