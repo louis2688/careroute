@@ -11,7 +11,7 @@ import {
 } from "react";
 import { preconnect } from "react-dom";
 import { Icon } from "@/components/icons";
-import { MOBILITY, PURPOSES, oneOf, TRIP_TYPES } from "@/lib/booking";
+import { MAX_SERIES, MOBILITY, PURPOSES, TRIP_TYPES, WEEKDAYS, oneOf } from "@/lib/booking";
 import { drivingRoute, searchPlaces, type Place } from "@/lib/geo";
 import { estimateFare, kmToMiles, money } from "@/lib/pricing";
 import { submitBooking } from "./actions";
@@ -145,6 +145,12 @@ export function BookingForm({
           or email you within one business hour to confirm the pickup window and the price.
           {sent.length > 0 && ` A confirmation is on its way to ${sent.join(" and ")}.`}
         </p>
+        {state.count > 1 && (
+          <p className="mt-2 text-slate-700">
+            This standing order has {state.count} rides through {state.until}. Each ride gets its own
+            reference and tracking page; the first one is above.
+          </p>
+        )}
         <p className="mt-2 text-slate-700">
           Need to change something? Call{" "}
           <a href={phoneHref} className="font-medium text-sky-700 underline">
@@ -254,6 +260,30 @@ export function BookingForm({
             <input name="returnTime" type="time" className={input} />
           </Field>
         </div>
+        <details className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <summary className="cursor-pointer text-sm font-medium text-slate-900">
+            Repeat this ride (standing order for dialysis, therapy, and other regular visits)
+          </summary>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <fieldset>
+              <legend className={groupLabel}>Repeat on</legend>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {WEEKDAYS.map((day, i) => (
+                  <label
+                    key={day}
+                    className="flex min-h-10 cursor-pointer items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-800 has-checked:border-sky-700 has-checked:bg-sky-50"
+                  >
+                    <input type="checkbox" name="days" value={i} className="size-4 accent-sky-700" />
+                    {day}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <Field label="Until" hint={`Up to 12 weeks or ${MAX_SERIES} rides. The first ride is the appointment date above.`}>
+              <input name="until" type="date" min={minDate} className={input} />
+            </Field>
+          </div>
+        </details>
         <input type="hidden" name="pickup_lat" value={picked.pickup?.lat ?? ""} />
         <input type="hidden" name="pickup_lon" value={picked.pickup?.lon ?? ""} />
         <input type="hidden" name="dropoff_lat" value={picked.dropoff?.lat ?? ""} />

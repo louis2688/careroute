@@ -28,7 +28,23 @@ export type Booking = {
   notes: string;
   // Present when both addresses were picked from the suggestions.
   coords?: { pickup: Place; dropoff: Place };
+  // Standing order: repeat on these weekdays (0 = Sunday) until this date.
+  recurrence?: { days: number[]; until: string };
 };
+
+export const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+export const MAX_SERIES = 30;
+
+// Dates for a standing order: the first date, then every selected weekday after it through `until`.
+export function occurrences(date: string, days: number[], until: string, max = MAX_SERIES): string[] {
+  const out = [date];
+  const d = new Date(`${date}T00:00:00Z`);
+  const end = new Date(`${until}T00:00:00Z`);
+  for (d.setUTCDate(d.getUTCDate() + 1); d <= end && out.length < max; d.setUTCDate(d.getUTCDate() + 1)) {
+    if (days.includes(d.getUTCDay())) out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
+}
 
 type Result = { ok: true; booking: Booking } | { ok: false; error: string };
 
@@ -93,6 +109,21 @@ export function validateBooking(form: FormData): Result {
         }
       : undefined;
 
+  // Standing order, optional. Both parts or neither.
+  const days = [...new Set(form.getAll("days").map(Number))].filter((n) => Number.isInteger(n) && n >= 0 && n <= 6);
+  const until = s("until");
+  let recurrence: Booking["recurrence"];
+  if (days.length || until) {
+    if (!days.length) return { ok: false, error: "Pick at least one weekday for the standing order." };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(until) || until <= s("date")) {
+      return { ok: false, error: "Pick an end date after the first ride for the standing order." };
+    }
+    if (Date.parse(until) - Date.parse(s("date")) > 84 * 864e5) {
+      return { ok: false, error: "Standing orders run up to 12 weeks. Dispatch can extend them later." };
+    }
+    recurrence = { days, until };
+  }
+
   return {
     ok: true,
     booking: {
@@ -110,6 +141,7 @@ export function validateBooking(form: FormData): Result {
       purpose: s("purpose"),
       notes: s("notes").slice(0, 2000),
       coords,
+      recurrence,
     },
   };
 }

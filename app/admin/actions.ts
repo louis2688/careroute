@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { MOBILITY, oneOf } from "@/lib/booking";
-import { STATUSES, insertDriver, isUuid, updateBooking, updateDriver } from "@/lib/db";
+import { STATUSES, insertDriver, insertFacility, isUuid, updateBooking, updateDriver } from "@/lib/db";
 import { CREDENTIALS, type CredentialKey } from "@/lib/fleet";
 import { notify, siteUrl } from "@/lib/notify";
 
@@ -51,5 +51,18 @@ export async function saveDriver(form: FormData) {
   const patch = { ...d, ...dates, vehicle_type, ...(pin ? { pin } : {}) };
   if (id) await updateDriver(id, patch);
   else await insertDriver({ ...patch, pin });
+  revalidatePath("/admin", "layout");
+}
+
+export async function saveFacility(form: FormData) {
+  const f = {
+    name: str(form, "name"),
+    access_code: str(form, "access_code").toUpperCase(),
+    contact_name: str(form, "contact_name") || null,
+    phone: str(form, "phone") || null,
+  };
+  // ponytail: access codes are stored as typed and shared by phone with the facility. Hash before production.
+  if (!f.name || !/^[A-Z0-9-]{6,32}$/.test(f.access_code)) return;
+  await insertFacility(f);
   revalidatePath("/admin", "layout");
 }

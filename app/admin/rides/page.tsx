@@ -163,6 +163,12 @@ export default async function AdminPage({
                         </p>
                       )}
                       {r.notes && <p className="mt-1 text-xs text-slate-600">Note: {r.notes}</p>}
+                      {(r.series_id || r.facility) && (
+                        <p className="mt-1 flex flex-wrap gap-1">
+                          {r.series_id && <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-800">Standing order</span>}
+                          {r.facility && <span className="rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800">{r.facility.name}</span>}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <p className="text-slate-900">{r.date}</p>

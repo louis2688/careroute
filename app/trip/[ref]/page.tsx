@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { Icon } from "@/components/icons";
-import { STATUSES, STATUS_LABEL, getBooking, type Status } from "@/lib/db";
+import { STATUSES, STATUS_LABEL, getBooking, listSeries, type Status } from "@/lib/db";
 import { kmToMiles, money } from "@/lib/pricing";
 import { site } from "@/lib/site";
 
@@ -25,6 +26,7 @@ export default async function TripPage({ params }: { params: Promise<{ ref: stri
   const { ref } = await params;
   const trip = /^CR-[0-9A-F]{8}$/.test(ref) ? await getBooking(ref) : null;
   if (!trip) notFound();
+  const series = trip.series_id ? await listSeries(trip.series_id) : [];
 
   const at: Partial<Record<Status, string>> = {};
   for (const e of trip.booking_events) at[e.status] ??= e.at;
@@ -118,6 +120,32 @@ export default async function TripPage({ params }: { params: Promise<{ ref: stri
               <p className="text-slate-600">
                 {money(trip.quote_cents)}, {kmToMiles(trip.distance_km).toFixed(1)} miles each way
               </p>
+            </div>
+          )}
+          {series.length > 1 && (
+            <div>
+              <p className="font-semibold text-slate-900">Standing order</p>
+              <p className="text-slate-600">{series.length} rides on this schedule.</p>
+              <ul className="mt-1 max-h-40 space-y-0.5 overflow-y-auto text-xs text-slate-600">
+                {series.map((s) => (
+                  <li key={s.ref}>
+                    {s.ref === trip.ref ? (
+                      <span className="font-semibold text-slate-900">{s.date} (this ride)</span>
+                    ) : (
+                      <Link href={`/trip/${s.ref}`} className="text-sky-700 hover:underline">
+                        {s.date}
+                      </Link>
+                    )}{" "}
+                    · {STATUS_LABEL[s.status]}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {trip.facility && (
+            <div>
+              <p className="font-semibold text-slate-900">Booked by</p>
+              <p className="text-slate-600">{trip.facility.name}</p>
             </div>
           )}
           <p className="border-t border-slate-200 pt-4 text-slate-600">

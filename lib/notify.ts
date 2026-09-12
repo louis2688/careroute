@@ -34,8 +34,9 @@ function message(b: Recipient, status: Status, base: string) {
   return { subject, text };
 }
 
-export async function notify(b: Recipient, status: Status, base: string) {
+export async function notify(b: Recipient, status: Status, base: string, note = "") {
   const m = message(b, status, base);
+  if (note) m.text += ` ${note}`;
   const results = await Promise.allSettled([sendEmail(b.email, m.subject, m.text), sendSms(b.phone, m.text)]);
   for (const r of results) if (r.status === "rejected") console.error(`[notify ${b.ref}]`, r.reason);
 }

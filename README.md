@@ -7,12 +7,13 @@ Website for a non-emergency medical transportation. Built with Next.js 16, React
 - `/` company overview: description, mission, vision, services summary, how booking works
 - `/services` the eight NEMT services with what each includes
 - `/terms` terms and conditions of service
-- `/book` ride request form with address suggestions and a live fare estimate. Validated on the server, saved to Postgres, returns a reference number
+- `/book` ride request form with address suggestions, a live fare estimate, and standing orders (repeat on chosen weekdays until a date, up to 30 rides). Validated on the server, saved to Postgres, returns a reference number
 - `/trip/CR-XXXXXXXX` passenger tracking page: request received, confirmed, driver on the way, completed. Refreshes itself.
 - `/admin` dispatch board: every request, day view, driver assignment, status buttons, CSV export. Password protected.
 - `/admin/fleet` drivers and vehicles with credential expiry badges (license, CPR, background check, inspection, insurance).
 - `/driver` driver app: sign in with phone + PIN, see assigned rides, tap through en route, picked up, completed. Each tap is GPS-stamped; drop-off captures the passenger's signature.
 - `/admin/export?from=&to=` proof-of-service CSV for billing: timestamps, GPS, driver, fare, signed yes/no.
+- `/facility` facility portal: hospitals and dialysis centers sign in with an access code, book for their patients, and see every ride they booked with driver and live status. Codes are managed on `/admin/facilities`.
 - `/account` passenger sign-in with Google. Shows every ride booked with that email, and pre-fills the booking form. Booking never requires an account.
 
 Every status change emails and texts the passenger (Resend and Twilio). Without keys the message prints to the server log.
@@ -53,6 +54,8 @@ Address suggestions and distances come from free OpenStreetMap services (Photon 
 Database schema lives in the Supabase migrations `create_bookings` and `trip_status_and_quotes`.
 
 ## Demo logins
+
+Seeded facilities (access code): City Dialysis Center `DIALYSIS-2026`, Harbor View Rehabilitation `HARBOR-2026`.
 
 Seeded drivers (phone, PIN): Marco Alvarez 555-010-3001 / 1234, Denise Okafor 555-010-3002 / 2345, Sam Whitfield 555-010-3003 / 3456. Change them on `/admin/fleet`.
 

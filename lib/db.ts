@@ -62,7 +62,19 @@ export type BookingRow = {
   last_lat: number | null;
   last_lon: number | null;
   signature: string | null;
+  series_id: string | null;
+  facility_id: string | null;
   driver?: Pick<Driver, "name" | "phone" | "vehicle_type" | "plate"> | null;
+  facility?: Pick<Facility, "name"> | null;
+};
+
+export type Facility = {
+  id: string;
+  name: string;
+  access_code: string;
+  contact_name: string | null;
+  phone: string | null;
+  created_at: string;
 };
 
 export type TripRow = BookingRow & {
@@ -97,45 +109,73 @@ function api(path: string, init: RequestInit = {}) {
 
 const read = (path: string) => api(path, { headers: { Prefer: "" } }).then((r) => r.json());
 
-const DRIVER = "driver:drivers(name,phone,vehicle_type,plate)";
+const DRIVER = "driver:drivers(name,phone,vehicle_type,plate),facility:facilities(name)";
 
-export async function insertBooking(ref: string, b: Booking, quote: (Route & { cents: number }) | null) {
-  await api("bookings", {
-    method: "POST",
-    body: JSON.stringify({
-      ref,
-      name: b.name,
-      phone: b.phone,
-      email: b.email,
-      pickup: b.pickup,
-      dropoff: b.dropoff,
-      date: b.date,
-      time: b.time,
-      trip_type: b.tripType,
-      return_time: b.returnTime || null,
-      mobility: b.mobility,
-      companions: b.companions,
-      purpose: b.purpose,
-      notes: b.notes,
-      distance_km: quote ? Number(quote.km.toFixed(2)) : null,
-      duration_min: quote ? Math.round(quote.minutes) : null,
-      quote_cents: quote?.cents ?? null,
-    }),
-  });
+export type Quote = Route & { cents: number };
+
+// One row of the bookings table, ready to insert.
+export function bookingRow(
+  ref: string,
+  b: Booking,
+  quote: Quote | null,
+  extra: { date?: string; series_id?: string | null; facility_id?: string | null } = {},
+) {
+  return {
+    ref,
+    name: b.name,
+    phone: b.phone,
+    email: b.email,
+    pickup: b.pickup,
+    dropoff: b.dropoff,
+    date: extra.date ?? b.date,
+    time: b.time,
+    trip_type: b.tripType,
+    return_time: b.returnTime || null,
+    mobility: b.mobility,
+    companions: b.companions,
+    purpose: b.purpose,
+    notes: b.notes,
+    distance_km: quote ? Number(quote.km.toFixed(2)) : null,
+    duration_min: quote ? Math.round(quote.minutes) : null,
+    quote_cents: quote?.cents ?? null,
+    series_id: extra.series_id ?? null,
+    facility_id: extra.facility_id ?? null,
+  };
+}
+
+// One request for one ride or a whole standing order.
+export async function insertBookings(rows: ReturnType<typeof bookingRow>[]) {
+  await api("bookings", { method: "POST", body: JSON.stringify(rows) });
 }
 
 // Newest first by default. Filtered by day or range, the schedule in pickup order.
-export function listBookings(filter: { date?: string; from?: string; open?: boolean } = {}): Promise<BookingRow[]> {
+export function listBookings(
+  filter: { date?: string; from?: string; open?: boolean; facility?: string } = {},
+): Promise<BookingRow[]> {
   const where = [
     filter.date && `date=eq.${filter.date}`,
     filter.from && `date=gte.${filter.from}`,
     filter.open && "status=in.(new,confirmed,en_route,picked_up)",
+    filter.facility && `facility_id=eq.${encodeURIComponent(filter.facility)}`,
   ]
     .filter(Boolean)
     .map((w) => `&${w}`)
     .join("");
-  const order = filter.date || filter.from ? "date.asc,time.asc" : "created_at.desc";
+  const order = filter.date || filter.from ? "date.asc,time.asc" : filter.facility ? "date.desc,time.desc" : "created_at.desc";
   return read(`bookings?select=*,${DRIVER}&order=${order}&limit=200${where}`);
+}
+
+// The other rides in a standing order.
+export const listSeries = (seriesId: string): Promise<Pick<BookingRow, "ref" | "date" | "status">[]> =>
+  read(`bookings?select=ref,date,status&series_id=eq.${encodeURIComponent(seriesId)}&order=date.asc`);
+
+export const listFacilities = (): Promise<Facility[]> => read("facilities?select=*&order=name.asc");
+
+export const findFacilityByCode = async (code: string): Promise<Facility | null> =>
+  (await read(`facilities?select=*&access_code=eq.${encodeURIComponent(code)}&limit=1`))[0] ?? null;
+
+export async function insertFacility(f: Omit<Facility, "id" | "created_at">) {
+  await api("facilities", { method: "POST", body: JSON.stringify(f) });
 }
 
 export async function getBooking(ref: string): Promise<TripRow | null> {

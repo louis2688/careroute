@@ -7,6 +7,7 @@ const tabs = [
   ["/admin", "Dashboard"],
   ["/admin/rides", "Ride requests"],
   ["/admin/fleet", "Drivers & fleet"],
+  ["/admin/facilities", "Facilities"],
 ] as const;
 
 export function AdminTabs() {
